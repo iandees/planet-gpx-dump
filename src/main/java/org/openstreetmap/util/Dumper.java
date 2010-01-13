@@ -210,6 +210,33 @@ public class Dumper {
     }
   }
 
+  private void writeGpxFileTags(ResultSet tags, int id) throws SQLException, XMLStreamException {
+    if (tags.isAfterLast()) return;
+
+    /*
+     * Fast forward to the current trace Id
+     */
+    while (tags.getInt(1) < id) {
+      if (!tags.next()) {
+        return;
+      }
+    }
+
+    // No tags for the current element?
+    if (tags.getInt(1) != id) {
+      return;
+    }
+
+    while (tags.getInt(1) == id) {
+      xmlw.writeStartElement("tag");
+      xmlw.writeCharacters(sanitize(tags.getString(2))); // I don't think we need to use CDATA here
+      xmlw.writeEndElement();
+      if (!tags.next()) {
+        return;
+      }
+    }
+  }  
+
   private void writeTrackableTraces() throws SQLException, XMLStreamException, IOException, XMLException {
     ResultSet gpxFiles = null;
     PreparedStatement gpxPointsStatement = getPreparedStatement("SELECT latitude, longitude, altitude, trackid, timestamp FROM gps_points WHERE gpx_id = ? ORDER by trackid, timestamp");
@@ -247,12 +274,10 @@ visibility="trackable"/> & no Tags or Description
         gpxPointsStatement.setLong(1, gpxFiles.getLong(1));
         ResultSet gpxPoints = gpxPointsStatement.executeQuery();
         File outputFile = new File(gpxOutputFolder, gpxFiles.getString(3));
+        //new GZIPOutputStream(new FileOutputStream(outputFile));
         XMLStreamWriter2 writer = createXMLWriter(new FileOutputStream(outputFile));
-        while (gpxPoints.next()) {
-
-        }
-        // GZIPOutputStream out = new GZIPOutputStream(new FileOutputStream(gzipFileName));
-
+        writeGpxFile(writer, gpxPoints);
+        writer.closeCompletely();
       }
     } finally {
       if (gpxFiles != null) gpxFiles.close();
@@ -264,31 +289,58 @@ visibility="trackable"/> & no Tags or Description
 
   }
 
-  private void writeGpxFileTags(ResultSet tags, int id) throws SQLException, XMLStreamException {
-    if (tags.isAfterLast()) return;
+  private void writeGpxFile(XMLStreamWriter2 writer, ResultSet gpxPoints) throws XMLStreamException, SQLException {
+    writer.writeStartDocument();
+    writer.writeStartElement("gpx");
+    writer.writeDefaultNamespace("http://www.topografix.com/GPX/1/1");
+    writer.writeNamespace("xsi","http://www.w3.org/2001/XMLSchema-instance");
+    //writer.writeAttribute schemaLocation
+    writer.writeAttribute("version", "1.1");
+    writer.writeAttribute("creator", "planet.gpx exporter");
 
-    /*
-     * Fast forward to the current trace Id
-     */
-    while (tags.getInt(1) < id) {
-      if (!tags.next()) {
-        return;
+    Integer trackId = null;
+
+    while (gpxPoints.next()) {
+      if (trackId == null) {
+        trackId = gpxPoints.getInt(4);
+        writeTrackElement(writer, trackId);        
+      } else if (gpxPoints.getInt(4) != trackId) {
+        writer.writeEndElement(); // </trk>
+        trackId = gpxPoints.getInt(4);
+        writeTrackElement(writer, trackId);
       }
-    }
 
-    // No tags for the current element?
-    if (tags.getInt(1) != id) {
-      return;
-    }
+      writer.writeStartElement("trkpt");
 
-    while (tags.getInt(1) == id) {
-      xmlw.writeStartElement("tag");
-      xmlw.writeCharacters(sanitize(tags.getString(2))); // I don't think we need to use CDATA here
-      xmlw.writeEndElement();
-      if (!tags.next()) {
-        return;
+      writer.writeAttribute("lat", OSMUtils.convertCoordinateToString(gpxPoints.getInt(1)));
+      writer.writeAttribute("lon", OSMUtils.convertCoordinateToString(gpxPoints.getInt(2)));
+
+      gpxPoints.getDouble(3);
+      if (!gpxPoints.wasNull()) {
+        writer.writeStartElement("ele");
+        writer.writeCharacters(OSMUtils.numberFormat.format(gpxPoints.getDouble(3)));
+        writer.writeEndElement();
       }
+
+      gpxPoints.getTimestamp(5);
+      if (!gpxPoints.wasNull()) {
+        writer.writeStartElement("time");
+        writer.writeCharacters(OSMUtils.dateFormat.format(gpxPoints.getTimestamp(5)));
+        writer.writeEndElement();
+      }
+
+      writer.writeEndElement();
     }
+
+    writer.writeEndElement(); // </gpx>
+  }
+
+  private void writeTrackElement(XMLStreamWriter2 writer, Integer trackId) throws XMLStreamException {
+        writer.writeStartElement("trk");
+
+        writer.writeStartElement("number");
+        writer.writeCharacters(trackId.toString());
+        writer.writeEndElement();
   }
 
   private String sanitize(String s) {

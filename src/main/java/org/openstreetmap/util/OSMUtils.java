@@ -9,8 +9,8 @@ public class OSMUtils {
     // OSM currently saves coordinates with a precision of 7 fractional digits
     private static final int PRECISION = 7;
     private static final int MULTIPLICATION_FACTOR;
-    private static final NumberFormat numberFormat = NumberFormat.getInstance(Locale.ENGLISH);
 
+    public static final NumberFormat numberFormat = NumberFormat.getInstance(Locale.ENGLISH);
     public static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"); // Not Thread safe!
 
     static {
