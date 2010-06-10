@@ -8,43 +8,45 @@ import org.openstreetmap.util.exceptions.XMLException;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 import java.io.*;
 import java.sql.*;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPOutputStream;
 
 
 public class Dumper {
   private static final int FETCH_SIZE = 10000;
-  private static final XMLOutputFactory2 xmlof = (XMLOutputFactory2) XMLOutputFactory2.newInstance();
-  private static Pattern sanitizePattern = Pattern.compile("[\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f]");
+  private static final XMLOutputFactory2 XMLOF = (XMLOutputFactory2) XMLOutputFactory2.newInstance();
+  private static final Pattern SANITIZE_PATTERN = Pattern.compile("[\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f]");
   private static final String NEW_LINE = System.getProperty("line.separator");  
 
   static {
-    xmlof.setProperty(XMLOutputFactory.IS_REPAIRING_NAMESPACES, Boolean.FALSE);
-    xmlof.setProperty(XMLOutputFactory2.XSP_NAMESPACE_AWARE, Boolean.FALSE);
+    XMLOF.setProperty(XMLOutputFactory.IS_REPAIRING_NAMESPACES, Boolean.FALSE);
+    XMLOF.setProperty(XMLOutputFactory2.XSP_NAMESPACE_AWARE, Boolean.TRUE);
 
     /*
     * Robustness is the slowest of all possible modes but I think in this case a few extra hours (haven't checked)
     * are worth the extra 'robustness'
     */
-    //xmlof.configureForSpeed();
-    //xmlof.configureForXmlConformance();
-    xmlof.configureForRobustness();
+    //XMLOF.configureForSpeed();
+    //XMLOF.configureForXmlConformance();
+    XMLOF.configureForRobustness();
   }
 
   private Connection connection;
-  private XMLStreamWriter2 xmlw;
+  private final XMLStreamWriter2 xmlw;
 
   private Map<Integer, String> users; // This might one day grow from Integer to Long but not for a long [sic!] time.
 
-  private FileWriter fileListFile;
-  private File gpxOutputFolder;
+  private final FileWriter fileListFile;
+  private final File gpxOutputFolder;
 
   public Dumper(String connectionUrl, File metadataFile, File fileListFile, File gpxOutputFolder) throws XMLException, DatabaseException, IOException {
-    this.xmlw = createXMLWriter(new FileOutputStream(metadataFile));
+    xmlw = createXMLWriter(new FileOutputStream(metadataFile));
     createDatabaseConnection(connectionUrl);
     this.fileListFile = new FileWriter(fileListFile);
     this.gpxOutputFolder = gpxOutputFolder;
@@ -60,9 +62,9 @@ public class Dumper {
     }
 
     try {
-      this.connection = DriverManager.getConnection(connectionUrl);
-      this.connection.setAutoCommit(false);
-      this.connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+      connection = DriverManager.getConnection(connectionUrl);
+      connection.setAutoCommit(false);
+      connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
     } catch (SQLException e) {
       throw new DatabaseException("Something has gone wrong creating a connection to the Database", e);
     }
@@ -70,23 +72,23 @@ public class Dumper {
 
   private XMLStreamWriter2 createXMLWriter(OutputStream stream) throws XMLException {
     try {
-      return (XMLStreamWriter2) xmlof.createXMLStreamWriter(stream);
+      return (XMLStreamWriter2) XMLOF.createXMLStreamWriter(stream);
     } catch (XMLStreamException e) {
       throw new XMLException("Error instantiating the XML Writer", e);
     }
   }
 
   public void dump() throws DatabaseException, XMLException, IOException {
-    final Date timestamp = new Date();
+    Date timestamp = new Date();
     try {
       fetchUsers();
-      writeOSMHeader(timestamp);
+      writeGPXHeader(timestamp);
 
       writeIdentifiableAndPublicTraces();
       writeTrackableTraces();
       writePrivateTraces();
 
-      writeOSMFooter();
+      writeGPXFooter();
       xmlw.flush();
     } catch (SQLException e) {
       throw new DatabaseException(e);
@@ -97,6 +99,7 @@ public class Dumper {
         xmlw.close();   // or xmlw.closeCompletely(); ?
         connection.rollback();
         connection.close();
+        fileListFile.close();
       } catch (SQLException e) {
         /* Throwing in a finally block...I know but there is nothing that can really go wrong if the connection is not closed. */
         throw new DatabaseException("Something went wrong rolling back the transaction and closing the connection.", e);
@@ -119,15 +122,15 @@ public class Dumper {
     return stmt;
   }
 
-  private void writeOSMHeader(Date timestamp) throws XMLStreamException {
+  private void writeGPXHeader(Date timestamp) throws XMLStreamException {
     xmlw.writeStartDocument();
     xmlw.writeStartElement("gpxFiles");
     xmlw.writeAttribute("generator", "OpenStreetMap PlanetGpxDump.java");
     xmlw.writeAttribute("timestamp", OSMUtils.dateFormat.format(timestamp));
   }
 
-  private void writeOSMFooter() throws XMLStreamException {
-    xmlw.writeEndElement(); // </osm>
+  private void writeGPXFooter() throws XMLStreamException {
+    xmlw.writeEndElement(); // </gpxFiles>
   }
 
   private void fetchUsers() throws NoUsersFoundException, SQLException {
@@ -145,7 +148,7 @@ public class Dumper {
 
       int maxUserId = rs.getInt(1);
       rs.close();
-      this.users = new HashMap<Integer, String>(maxUserId);
+      users = new HashMap<Integer, String>(maxUserId);
 
       PreparedStatement pstmt = getPreparedStatement("SELECT id, display_name FROM users WHERE id <= ?");
       pstmt.setInt(1, maxUserId);
@@ -189,7 +192,7 @@ public class Dumper {
                 OSMUtils.convertCoordinateToString(OSMUtils.convertCoordinateToInt(gpxFiles.getDouble(8))));
         xmlw.writeAttribute("visibility", gpxFiles.getString(9));
 
-        if (gpxFiles.getString(9).equals("identifiable")) {
+        if ("identifiable".equals(gpxFiles.getString(9))) {
           int uid = gpxFiles.getInt(2);
           if (users.containsKey(uid)) {
             xmlw.writeAttribute("user", users.get(uid));
@@ -201,6 +204,7 @@ public class Dumper {
 
         xmlw.writeEndElement();
 
+        // TODO: Do we need to prepend this with some kind of absolute path?
         fileListFile.write(gpxFiles.getString(4));
         fileListFile.write(NEW_LINE);        
       }
@@ -240,7 +244,6 @@ public class Dumper {
   private void writeTrackableTraces() throws SQLException, XMLStreamException, IOException, XMLException {
     ResultSet gpxFiles = null;
     PreparedStatement gpxPointsStatement = getPreparedStatement("SELECT latitude, longitude, altitude, trackid, timestamp FROM gps_points WHERE gpx_id = ? ORDER by trackid, timestamp");
-    ResultSet tags = null;
 
     try {
       gpxFiles = executeQuery(
@@ -248,11 +251,7 @@ public class Dumper {
                       "FROM gpx_files " +
                       "WHERE inserted = true AND visible = true AND visibility = 'trackable'" +
                       "ORDER BY id");
-/*
-<gpxFile id="12347" timestamp="2006-03-21T09:33:03Z"
-points="2143" startLatitude="10.1234567" startLongitude="53.1234567"
-visibility="trackable"/> & no Tags or Description
- */
+
       while (gpxFiles.next()) {
         xmlw.writeStartElement("gpxFile");
         xmlw.writeAttribute("id", gpxFiles.getString(1));
@@ -267,47 +266,82 @@ visibility="trackable"/> & no Tags or Description
 
         xmlw.writeEndElement();
 
-        fileListFile.write(gpxFiles.getString(3));
-        fileListFile.write(NEW_LINE);
-
         // Write a custom GPX file with all the points for this trace
         gpxPointsStatement.setLong(1, gpxFiles.getLong(1));
         ResultSet gpxPoints = gpxPointsStatement.executeQuery();
-        File outputFile = new File(gpxOutputFolder, gpxFiles.getString(3));
-        //new GZIPOutputStream(new FileOutputStream(outputFile));
-        XMLStreamWriter2 writer = createXMLWriter(new FileOutputStream(outputFile));
-        writeGpxFile(writer, gpxPoints);
+        File outputFile = new File(gpxOutputFolder, Long.toString(gpxFiles.getLong(1)) + ".gz");
+        fileListFile.write(outputFile.getAbsolutePath());
+        fileListFile.write(NEW_LINE);
+        OutputStream out = new GZIPOutputStream(new FileOutputStream(outputFile));
+        XMLStreamWriter2 writer = createXMLWriter(out);
+        writeGpxFileStart(writer);
+        writeGpxFile(writer, gpxPoints, true);
+        writeGpxFileEnd(writer);
         writer.closeCompletely();
       }
     } finally {
       if (gpxFiles != null) gpxFiles.close();
-      if (tags != null) tags.close();
     }
   }
 
-  private void writePrivateTraces() throws SQLException, XMLStreamException, IOException {
+  private void writePrivateTraces() throws SQLException, XMLStreamException, IOException, XMLException {
+    ResultSet gpxFiles = null;
+    PreparedStatement gpxPointsStatement = getPreparedStatement("SELECT latitude, longitude, altitude FROM gps_points WHERE gpx_id = ? ORDER by trackid, timestamp");
+
+    try {
+      gpxFiles = executeQuery(
+          "SELECT id " +
+              "FROM gpx_files " +
+              "WHERE inserted = true AND visible = true AND visibility = 'private'" +
+              "ORDER BY id");
+
+      // Only one file for all private traces
+      xmlw.writeStartElement("gpxFile");
+      xmlw.writeAttribute("fileName", "private.gpx");
+      xmlw.writeAttribute("visibility", "private");
+      xmlw.writeEndElement();
+
+      File outputFile = new File(gpxOutputFolder, "public.gpx.gz");
+      OutputStream out = new GZIPOutputStream(new FileOutputStream(outputFile));
+      XMLStreamWriter2 writer = createXMLWriter(out);
+      fileListFile.write(outputFile.getAbsolutePath());
+      fileListFile.write(NEW_LINE);
+
+      writeGpxFileStart(writer);
+
+      while (gpxFiles.next()) {
+        gpxPointsStatement.setLong(1, gpxFiles.getLong(1));
+        ResultSet gpxPoints = gpxPointsStatement.executeQuery();
+        writeGpxFile(writer, gpxPoints, false);
+      }
+
+      writeGpxFileEnd(writer);
+
+      writer.closeCompletely();
+    } finally {
+      if (gpxFiles != null) gpxFiles.close();
+    }
 
   }
 
-  private void writeGpxFile(XMLStreamWriter2 writer, ResultSet gpxPoints) throws XMLStreamException, SQLException {
-    writer.writeStartDocument();
-    writer.writeStartElement("gpx");
-    writer.writeDefaultNamespace("http://www.topografix.com/GPX/1/1");
-    writer.writeNamespace("xsi","http://www.w3.org/2001/XMLSchema-instance");
-    //writer.writeAttribute schemaLocation
-    writer.writeAttribute("version", "1.1");
-    writer.writeAttribute("creator", "planet.gpx exporter");
-
+  private void writeGpxFile(XMLStreamWriter2 writer, ResultSet gpxPoints, boolean writeTracks) throws XMLStreamException, SQLException {
     Integer trackId = null;
 
+    if (!writeTracks) {
+      writeTrackElementStart(writer, 1);
+    }
+
     while (gpxPoints.next()) {
-      if (trackId == null) {
-        trackId = gpxPoints.getInt(4);
-        writeTrackElement(writer, trackId);        
-      } else if (gpxPoints.getInt(4) != trackId) {
-        writer.writeEndElement(); // </trk>
-        trackId = gpxPoints.getInt(4);
-        writeTrackElement(writer, trackId);
+      // Start a new <trk> if the track id has changed
+      if (writeTracks) {
+        if (trackId == null) {
+          trackId = gpxPoints.getInt(4);
+          writeTrackElementStart(writer, trackId);
+        } else if (gpxPoints.getInt(4) != trackId) {
+          writeTrackElementEnd(writer);
+          trackId = gpxPoints.getInt(4);
+          writeTrackElementStart(writer, trackId);
+        }
       }
 
       writer.writeStartElement("trkpt");
@@ -329,22 +363,49 @@ visibility="trackable"/> & no Tags or Description
         writer.writeEndElement();
       }
 
-      writer.writeEndElement();
+      writer.writeEndElement(); // </trkpt>
     }
 
+    if (!writeTracks) {
+      // TODO: Problem wenn keine Nodes geschrieben wurden
+      writeTrackElementEnd(writer);
+    }
+  }
+
+  private void writeGpxFileStart(XMLStreamWriter2 writer) throws XMLStreamException {
+    writer.writeStartDocument();
+    writer.writeStartElement("gpx");
+    writer.writeDefaultNamespace("http://www.topografix.com/GPX/1/0");
+    writer.writeAttribute("version", "1.0");
+    writer.writeAttribute("creator", "planet.gpx exporter");
+  }
+
+  private void writeGpxFileEnd(XMLStreamWriter2 writer) throws XMLStreamException {
+    writeTrackElementEnd(writer);
     writer.writeEndElement(); // </gpx>
   }
 
-  private void writeTrackElement(XMLStreamWriter2 writer, Integer trackId) throws XMLStreamException {
+  private void writeTrackElementStart(XMLStreamWriter writer, Integer trackId) throws XMLStreamException {
         writer.writeStartElement("trk");
+
+        writer.writeStartElement("name");
+        writer.writeCharacters("Track " + trackId.toString());
+        writer.writeEndElement();
 
         writer.writeStartElement("number");
         writer.writeCharacters(trackId.toString());
         writer.writeEndElement();
+
+        writer.writeStartElement("trkseg");
+  }
+
+  private void writeTrackElementEnd(XMLStreamWriter writer) throws XMLStreamException {
+    writer.writeEndElement(); // </trkseg>
+    writer.writeEndElement(); // </trk>
   }
 
   private String sanitize(String s) {
-    return sanitizePattern.matcher(s).replaceAll("");
+    return SANITIZE_PATTERN.matcher(s).replaceAll("");
   }
 
 }

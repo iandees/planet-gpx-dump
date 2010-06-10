@@ -8,8 +8,7 @@ import java.io.File;
 import java.io.IOException;
 
 /**
- * A program to dump all OpenStreetMap elements (Nodes, Ways and Relations) and their history as well as all Changesets.
- * This is written for API v0.6.
+ * A program to dump all OpenStreetMap GPS-Traces
  */
 public class PlanetGpxDump {
 
@@ -61,7 +60,7 @@ public class PlanetGpxDump {
             }
             System.exit(1);
         } catch (IOException e) {
-          e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+          e.printStackTrace();
         }
 
     }
@@ -94,8 +93,7 @@ public class PlanetGpxDump {
 
     private static void printHelp(Options options) {
         HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp("historydump", "The following options are allowed:", options,
-                "\nIf none of those options are specified all data will be dumped.\n" +
+        formatter.printHelp("planetgpxdump", "The following options are allowed:", options,
                 "The connection parameters have to be provided in the environment variable CONNECTION_PARAMS in the format: \n" +
                 "[//host[:port]/]database?user=<username>&password=<password>\n" +
                 "* [host] defaults to 'localhost'. To specify an IPv6 address your must enclose the host parameter with square brackets.\n" +

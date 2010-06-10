@@ -70,7 +70,7 @@
         <dependency>
             <groupId>org.codehaus.woodstox</groupId>
             <artifactId>woodstox-core-asl</artifactId>
-            <version>4.0.7</version>
+            <version>4.0.8</version>
         </dependency>
     </dependencies>
 </project>
