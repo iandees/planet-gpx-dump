@@ -45,11 +45,14 @@ public class Dumper {
   private final FileWriter fileListFile;
   private final File gpxOutputFolder;
 
-  public Dumper(String connectionUrl, File metadataFile, File fileListFile, File gpxOutputFolder) throws XMLException, DatabaseException, IOException {
+  private final String gpxFolder;
+
+  public Dumper(String connectionUrl, File metadataFile, File fileListFile, File gpxOutputFolder, String gpxFolder) throws XMLException, DatabaseException, IOException {
     xmlw = createXMLWriter(new FileOutputStream(metadataFile));
     createDatabaseConnection(connectionUrl);
     this.fileListFile = new FileWriter(fileListFile);
     this.gpxOutputFolder = gpxOutputFolder;
+    this.gpxFolder = gpxFolder;
   }
 
   private void createDatabaseConnection(String connectionUrl) throws DatabaseException {
@@ -205,7 +208,7 @@ public class Dumper {
         xmlw.writeEndElement();
 
         // TODO: Do we need to prepend this with some kind of absolute path?
-        fileListFile.write(gpxFiles.getString(4));
+        fileListFile.write(gpxFolder + gpxFiles.getString(4));
         fileListFile.write(NEW_LINE);        
       }
     } finally {
@@ -256,7 +259,7 @@ public class Dumper {
         xmlw.writeStartElement("gpxFile");
         xmlw.writeAttribute("id", gpxFiles.getString(1));
         xmlw.writeAttribute("timestamp", OSMUtils.dateFormat.format(gpxFiles.getTimestamp(2)));
-        xmlw.writeAttribute("fileName", gpxFiles.getString(3));
+        xmlw.writeAttribute("fileName", gpxFiles.getLong(1) + ".gpx.gz");
         xmlw.writeAttribute("points", gpxFiles.getString(4));
         xmlw.writeAttribute("startLatitude",
                 OSMUtils.convertCoordinateToString(OSMUtils.convertCoordinateToInt(gpxFiles.getDouble(5))));
@@ -336,7 +339,7 @@ public class Dumper {
 
       // Only one file for all private traces
       xmlw.writeStartElement("gpxFile");
-      xmlw.writeAttribute("fileName", "private.gpx");
+      xmlw.writeAttribute("fileName", "private.gpx.gz");
       xmlw.writeAttribute("visibility", "private");
       xmlw.writeEndElement();
 
