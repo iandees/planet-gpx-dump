@@ -186,7 +186,8 @@ public class Dumper {
         xmlw.writeStartElement("gpxFile");
         xmlw.writeAttribute("id", gpxFiles.getString(1));
         xmlw.writeAttribute("timestamp", OSMUtils.dateFormat.format(gpxFiles.getTimestamp(3)));
-        xmlw.writeAttribute("fileName", gpxFiles.getString(4));
+        xmlw.writeAttribute("fileName", Long.toString(gpxFiles.getLong(1)));
+        xmlw.writeAttribute("originalFileName", gpxFiles.getString(4));
         xmlw.writeAttribute("description", sanitize(gpxFiles.getString(5)));
         xmlw.writeAttribute("points", gpxFiles.getString(6));
         xmlw.writeAttribute("startLatitude",
@@ -207,8 +208,7 @@ public class Dumper {
 
         xmlw.writeEndElement();
 
-        // TODO: Do we need to prepend this with some kind of absolute path?
-        fileListFile.write(gpxFolder + gpxFiles.getString(4));
+        fileListFile.write(gpxFolder + gpxFiles.getString(1));
         fileListFile.write(NEW_LINE);        
       }
     } finally {
