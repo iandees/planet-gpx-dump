@@ -269,13 +269,13 @@ public class Dumper {
         // Write a custom GPX file with all the points for this trace
         gpxPointsStatement.setLong(1, gpxFiles.getLong(1));
         ResultSet gpxPoints = gpxPointsStatement.executeQuery();
-        File outputFile = new File(gpxOutputFolder, Long.toString(gpxFiles.getLong(1)) + ".gz");
+        File outputFile = new File(gpxOutputFolder, Long.toString(gpxFiles.getLong(1)) + ".gpx.gz");
         fileListFile.write(outputFile.getAbsolutePath());
         fileListFile.write(NEW_LINE);
         OutputStream out = new GZIPOutputStream(new FileOutputStream(outputFile));
         XMLStreamWriter2 writer = createXMLWriter(out);
         writeGpxFileStart(writer);
-        writeGpxFile(writer, gpxPoints, true);
+        writeTrackableGpxFile(writer, gpxPoints);
         writeGpxFileEnd(writer);
         writer.closeCompletely();
       }
@@ -284,56 +284,11 @@ public class Dumper {
     }
   }
 
-  private void writePrivateTraces() throws SQLException, XMLStreamException, IOException, XMLException {
-    ResultSet gpxFiles = null;
-    PreparedStatement gpxPointsStatement = getPreparedStatement("SELECT latitude, longitude, altitude FROM gps_points WHERE gpx_id = ? ORDER by trackid, timestamp");
-
-    try {
-      gpxFiles = executeQuery(
-          "SELECT id " +
-              "FROM gpx_files " +
-              "WHERE inserted = true AND visible = true AND visibility = 'private'" +
-              "ORDER BY id");
-
-      // Only one file for all private traces
-      xmlw.writeStartElement("gpxFile");
-      xmlw.writeAttribute("fileName", "private.gpx");
-      xmlw.writeAttribute("visibility", "private");
-      xmlw.writeEndElement();
-
-      File outputFile = new File(gpxOutputFolder, "public.gpx.gz");
-      OutputStream out = new GZIPOutputStream(new FileOutputStream(outputFile));
-      XMLStreamWriter2 writer = createXMLWriter(out);
-      fileListFile.write(outputFile.getAbsolutePath());
-      fileListFile.write(NEW_LINE);
-
-      writeGpxFileStart(writer);
-
-      while (gpxFiles.next()) {
-        gpxPointsStatement.setLong(1, gpxFiles.getLong(1));
-        ResultSet gpxPoints = gpxPointsStatement.executeQuery();
-        writeGpxFile(writer, gpxPoints, false);
-      }
-
-      writeGpxFileEnd(writer);
-
-      writer.closeCompletely();
-    } finally {
-      if (gpxFiles != null) gpxFiles.close();
-    }
-
-  }
-
-  private void writeGpxFile(XMLStreamWriter2 writer, ResultSet gpxPoints, boolean writeTracks) throws XMLStreamException, SQLException {
+  private void writeTrackableGpxFile(XMLStreamWriter2 writer, ResultSet gpxPoints) throws XMLStreamException, SQLException {
     Integer trackId = null;
-
-    if (!writeTracks) {
-      writeTrackElementStart(writer, 1);
-    }
 
     while (gpxPoints.next()) {
       // Start a new <trk> if the track id has changed
-      if (writeTracks) {
         if (trackId == null) {
           trackId = gpxPoints.getInt(4);
           writeTrackElementStart(writer, trackId);
@@ -342,7 +297,6 @@ public class Dumper {
           trackId = gpxPoints.getInt(4);
           writeTrackElementStart(writer, trackId);
         }
-      }
 
       writer.writeStartElement("trkpt");
 
@@ -366,10 +320,65 @@ public class Dumper {
       writer.writeEndElement(); // </trkpt>
     }
 
-    if (!writeTracks) {
-      // TODO: Problem wenn keine Nodes geschrieben wurden
-      writeTrackElementEnd(writer);
+  }
+
+
+  private void writePrivateTraces() throws SQLException, XMLStreamException, IOException, XMLException {
+    ResultSet gpxFiles = null;
+    PreparedStatement gpxPointsStatement = getPreparedStatement("SELECT latitude, longitude, altitude FROM gps_points WHERE gpx_id = ? ORDER by trackid, timestamp");
+
+    try {
+      gpxFiles = executeQuery(
+          "SELECT id " +
+              "FROM gpx_files " +
+              "WHERE inserted = true AND visible = true AND visibility = 'private'" +
+              "ORDER BY id");
+
+      // Only one file for all private traces
+      xmlw.writeStartElement("gpxFile");
+      xmlw.writeAttribute("fileName", "private.gpx");
+      xmlw.writeAttribute("visibility", "private");
+      xmlw.writeEndElement();
+
+      File outputFile = new File(gpxOutputFolder, "private.gpx.gz");
+      OutputStream out = new GZIPOutputStream(new FileOutputStream(outputFile));
+      XMLStreamWriter2 writer = createXMLWriter(out);
+      fileListFile.write(outputFile.getAbsolutePath());
+      fileListFile.write(NEW_LINE);
+
+      writeGpxFileStart(writer);
+      writeTrackElementStart(writer, 1);
+      while (gpxFiles.next()) {
+        gpxPointsStatement.setLong(1, gpxFiles.getLong(1));
+        ResultSet gpxPoints = gpxPointsStatement.executeQuery();
+        writePrivateGpxFile(writer, gpxPoints);
+      }
+      writeGpxFileEnd(writer);
+
+      writer.closeCompletely();
+    } finally {
+      if (gpxFiles != null) gpxFiles.close();
     }
+
+  }
+
+  private void writePrivateGpxFile(XMLStreamWriter2 writer, ResultSet gpxPoints) throws XMLStreamException, SQLException {
+    while (gpxPoints.next()) {
+      writer.writeStartElement("trkpt");
+
+      writer.writeAttribute("lat", OSMUtils.convertCoordinateToString(gpxPoints.getInt(1)));
+      writer.writeAttribute("lon", OSMUtils.convertCoordinateToString(gpxPoints.getInt(2)));
+
+      gpxPoints.getDouble(3);
+      if (!gpxPoints.wasNull()) {
+        writer.writeStartElement("ele");
+        writer.writeCharacters(OSMUtils.numberFormat.format(gpxPoints.getDouble(3)));
+        writer.writeEndElement();
+      }
+
+      writer.writeEndElement(); // </trkpt>
+    }
+
   }
 
   private void writeGpxFileStart(XMLStreamWriter2 writer) throws XMLStreamException {
