@@ -179,8 +179,6 @@ public class Dumper {
                       "WHERE inserted = true AND visible = true AND (visibility = 'identifiable' OR visibility = 'public') " +
                       "ORDER BY id");
 
-      tags = executeQuery("SELECT gpx_id, tag FROM gpx_file_tags ORDER BY gpx_id, tag");
-      tags.next();
 
       while (gpxFiles.next()) {
         xmlw.writeStartElement("gpxFile");
@@ -204,7 +202,7 @@ public class Dumper {
           }
         }
 
-        writeGpxFileTags(tags, gpxFiles.getInt(1));
+        writeGpxFileTags(gpxFiles.getInt(1));
 
         xmlw.writeEndElement();
 
@@ -217,30 +215,13 @@ public class Dumper {
     }
   }
 
-  private void writeGpxFileTags(ResultSet tags, int id) throws SQLException, XMLStreamException {
-    if (tags.isAfterLast()) return;
+  private void writeGpxFileTags(int id) throws SQLException, XMLStreamException {
+    ResultSet tags = executeQuery("SELECT tag FROM gpx_file_tags WHERE gpx_id="+id);
 
-    /*
-     * Fast forward to the current trace Id
-     */
-    while (tags.getInt(1) < id) {
-      if (!tags.next()) {
-        return;
-      }
-    }
-
-    // No tags for the current element?
-    if (tags.getInt(1) != id) {
-      return;
-    }
-
-    while (tags.getInt(1) == id) {
+    while (tags.next()) {
       xmlw.writeStartElement("tag");
-      xmlw.writeCharacters(sanitize(tags.getString(2))); // I don't think we need to use CDATA here
+      xmlw.writeCharacters(sanitize(tags.getString(1))); // I don't think we need to use CDATA here
       xmlw.writeEndElement();
-      if (!tags.next()) {
-        return;
-      }
     }
   }  
 
