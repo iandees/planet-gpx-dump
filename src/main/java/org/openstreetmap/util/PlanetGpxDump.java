@@ -71,7 +71,7 @@ public class PlanetGpxDump {
 
     private static CommandLine parseCommandLine(String[] args) {
         Options options = new Options();
-        options.addOption("connection", true, "specifies the connection parameters. This overrides a CONNECTION_PARAMS environment variable");
+        options.addOption("c", "connection", true, "specifies the connection parameters. This overrides a CONNECTION_PARAMS environment variable");
         options.addOption("m", "metadatafilename", true, "[required] specifies the name of the XML file which includes the metadata for all the GPX files. Must not exist.");
         options.addOption("f", "filelistname", true, "[required] specifies the name of the file where the list of GPX files to export is written to. Must not exist.");
         options.addOption("e", "extragpxfolder", true, "[required] specifies the folder where the Private and Trackable traces should be written to. Must exist.");
