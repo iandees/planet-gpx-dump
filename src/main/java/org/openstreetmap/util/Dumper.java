@@ -199,8 +199,7 @@ public class Dumper {
 
         xmlw.writeEndElement();
 
-        fileListFile.write(gpxFolder + gpxFiles.getString(1));
-        fileListFile.write(NEW_LINE);        
+        appendGpxFileToExportList(new File(gpxFolder, gpxFiles.getString(1)));
       }
     } finally {
       if (gpxFiles != null) gpxFiles.close();
@@ -244,8 +243,7 @@ public class Dumper {
 
         xmlw.writeEndElement();
 
-        fileListFile.write(gpxFolder + gpxFiles.getString(1));
-        fileListFile.write(NEW_LINE);        
+        appendGpxFileToExportList(new File(gpxFolder, gpxFiles.getString(1)));
       }
     } finally {
       if (gpxFiles != null) gpxFiles.close();
@@ -288,23 +286,32 @@ public class Dumper {
 
         xmlw.writeEndElement();
 
-        // Write a custom GPX file with all the points for this trace
+        // Query for the GPX points
         gpxPointsStatement.setLong(1, gpxFiles.getLong(1));
         ResultSet gpxPoints = gpxPointsStatement.executeQuery();
+
         File outputFile = new File(gpxOutputFolder, Long.toString(gpxFiles.getLong(1)) + ".gpx.gz");
-        fileListFile.write(outputFile.getAbsolutePath());
-        fileListFile.write(NEW_LINE);
+        
+        // Write individual trackable GPX file
         OutputStream out = new GZIPOutputStream(new FileOutputStream(outputFile));
         XMLStreamWriter2 writer = createXMLWriter(out);
         writeGpxFileStart(writer);
         writeTrackableGpxFile(writer, gpxPoints);
         writeGpxFileEnd(writer);
         writer.closeCompletely();
+
+        // Remember the filename we wrote so it can be included in the overally dump
+        appendGpxFileToExportList(outputFile);
       }
     } finally {
       if (gpxFiles != null) gpxFiles.close();
     }
   }
+
+private void appendGpxFileToExportList(File gpxFile) throws IOException {
+    fileListFile.write(gpxFile.getAbsolutePath());
+    fileListFile.write(NEW_LINE);
+}
 
   private void writeTrackableGpxFile(XMLStreamWriter2 writer, ResultSet gpxPoints) throws XMLStreamException, SQLException {
     Integer trackId = null;
@@ -367,8 +374,7 @@ public class Dumper {
       File outputFile = new File(gpxOutputFolder, "private.gpx.gz");
       OutputStream out = new GZIPOutputStream(new FileOutputStream(outputFile));
       XMLStreamWriter2 writer = createXMLWriter(out);
-      fileListFile.write(outputFile.getAbsolutePath());
-      fileListFile.write(NEW_LINE);
+      appendGpxFileToExportList(outputFile);
 
       writeGpxFileStart(writer);
       writeTrackElementStart(writer, 1);
