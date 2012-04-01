@@ -310,7 +310,7 @@ public class Dumper {
                 writer.closeCompletely();
 
                 // Remember the filename we wrote so it can be included in the
-                // overally dump
+                // overall dump
                 appendGpxFileToExportList(outputFile);
             }
         } finally {
