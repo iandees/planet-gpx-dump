@@ -237,9 +237,11 @@ public class Dumper {
                 xmlw.writeAttribute("visibility", gpxFiles.getString(9));
 
                 int uid = gpxFiles.getInt(2);
-                if (users.containsKey(uid)) {
-                    xmlw.writeAttribute("user", users.get(uid));
-                    xmlw.writeAttribute("uid", gpxFiles.getString(2));
+                xmlw.writeAttribute("uid", Integer.toString(uid));
+
+                String username = users.get(uid);
+                if (username != null) {
+                    xmlw.writeAttribute("user", username);
                 }
 
                 writeGpxFileTags(gpxFiles.getInt(1));
