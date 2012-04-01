@@ -316,7 +316,7 @@ public class Dumper {
           "SELECT id " +
               "FROM gpx_files " +
               "WHERE inserted = true AND visible = true AND visibility = 'private'" +
-              "ORDER BY id");
+              "ORDER BY tile ASC, latitude ASC, longitude ASC");
 
       // Only one file for all private traces
       xmlw.writeStartElement("gpxFile");
