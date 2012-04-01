@@ -278,7 +278,7 @@ public class Dumper {
             gpxFiles = executeQuery(
                     "SELECT id, timestamp, name, size, latitude, longitude, visibility "
                     + "FROM gpx_files "
-                    + "WHERE inserted = true AND visible = true AND visibility = 'trackable'"
+                    + "WHERE inserted = true AND visible = true AND visibility = 'trackable' "
                     + "ORDER BY id");
 
             while (gpxFiles.next()) {
