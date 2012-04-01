@@ -176,8 +176,9 @@ public class Dumper {
 
     }
 
-    private void writePublicTraces() throws XMLStreamException, SQLException, IOException {
+    private void writePublicTraces() throws XMLStreamException, SQLException, IOException, XMLException {
         ResultSet gpxFiles = null;
+        ResultSet gpxPoints = null;
         ResultSet tags = null;
 
         try {
@@ -186,6 +187,12 @@ public class Dumper {
                     + "FROM gpx_files "
                     + "WHERE inserted = true AND visible = true AND (visibility = 'public') "
                     + "ORDER BY id");
+
+            PreparedStatement gpxPointsStatement = getPreparedStatement(
+                    "SELECT latitude, longitude, altitude, trackid " +
+                    "FROM gps_points " +
+                    "WHERE gpx_id = ? " +
+                    "ORDER BY trackid ASC, tile ASC, latitude ASC, longitude ASC");
 
             while (gpxFiles.next()) {
                 xmlw.writeStartElement("gpxFile");
@@ -203,14 +210,64 @@ public class Dumper {
 
                 xmlw.writeEndElement();
 
-                appendGpxFileToExportList(new File(gpxFolder, gpxFiles.getString(1)));
+                // Query for the GPX points
+                gpxPointsStatement.setLong(1, gpxFiles.getLong(1));
+                gpxPoints = gpxPointsStatement.executeQuery();
+
+                File outputFile = new File(gpxOutputFolder, Long.toString(gpxFiles.getLong(1)) + ".gpx.gz");
+
+                // Write individual trackable GPX file
+                OutputStream out = new GZIPOutputStream(new FileOutputStream(outputFile));
+                XMLStreamWriter2 writer = createXMLWriter(out);
+                writeGpxFileStart(writer);
+                writePublicGpxFile(writer, gpxPoints);
+                writeGpxFileEnd(writer);
+                writer.closeCompletely();
+
+                // Remember the filename we wrote so it can be included in the
+                // overall dump
+                appendGpxFileToExportList(outputFile);
             }
         } finally {
             if (gpxFiles != null)
                 gpxFiles.close();
+            if (gpxPoints != null)
+                gpxPoints.close();
             if (tags != null)
                 tags.close();
         }
+    }
+
+    private void writePublicGpxFile(XMLStreamWriter2 writer, ResultSet gpxPoints) throws XMLStreamException,
+            SQLException {
+        Integer trackId = null;
+
+        while (gpxPoints.next()) {
+            // Start a new <trk> if the track id has changed
+            if (trackId == null) {
+                trackId = gpxPoints.getInt(4);
+                writeTrackElementStart(writer, trackId);
+            } else if (gpxPoints.getInt(4) != trackId) {
+                writeTrackElementEnd(writer);
+                trackId = gpxPoints.getInt(4);
+                writeTrackElementStart(writer, trackId);
+            }
+
+            writer.writeStartElement("trkpt");
+
+            writer.writeAttribute("lat", OSMUtils.convertCoordinateToString(gpxPoints.getInt(1)));
+            writer.writeAttribute("lon", OSMUtils.convertCoordinateToString(gpxPoints.getInt(2)));
+
+            gpxPoints.getDouble(3);
+            if (!gpxPoints.wasNull()) {
+                writer.writeStartElement("ele");
+                writer.writeCharacters(OSMUtils.numberFormat.format(gpxPoints.getDouble(3)));
+                writer.writeEndElement();
+            }
+
+            writer.writeEndElement(); // </trkpt>
+        }
+
     }
 
     private void writeIdentifiableTraces() throws XMLStreamException, SQLException, IOException {
@@ -270,11 +327,7 @@ public class Dumper {
 
     private void writeTrackableTraces() throws SQLException, XMLStreamException, IOException, XMLException {
         ResultSet gpxFiles = null;
-        PreparedStatement gpxPointsStatement = getPreparedStatement(
-                "SELECT latitude, longitude, altitude, trackid, timestamp " +
-                "FROM gps_points " +
-                "WHERE gpx_id = ? " +
-                "ORDER by trackid, timestamp");
+        ResultSet gpxPoints = null;
 
         try {
             gpxFiles = executeQuery(
@@ -282,6 +335,12 @@ public class Dumper {
                     + "FROM gpx_files "
                     + "WHERE inserted = true AND visible = true AND visibility = 'trackable' "
                     + "ORDER BY id");
+
+            PreparedStatement gpxPointsStatement = getPreparedStatement(
+                    "SELECT latitude, longitude, altitude, trackid, timestamp " +
+                    "FROM gps_points " +
+                    "WHERE gpx_id = ? " +
+                    "ORDER by trackid, timestamp");
 
             while (gpxFiles.next()) {
                 xmlw.writeStartElement("gpxFile");
@@ -297,7 +356,7 @@ public class Dumper {
 
                 // Query for the GPX points
                 gpxPointsStatement.setLong(1, gpxFiles.getLong(1));
-                ResultSet gpxPoints = gpxPointsStatement.executeQuery();
+                gpxPoints = gpxPointsStatement.executeQuery();
 
                 File outputFile = new File(gpxOutputFolder, Long.toString(gpxFiles.getLong(1)) + ".gpx.gz");
 
@@ -316,6 +375,8 @@ public class Dumper {
         } finally {
             if (gpxFiles != null)
                 gpxFiles.close();
+            if (gpxPoints != null)
+                gpxPoints.close();
         }
     }
 
@@ -365,10 +426,7 @@ public class Dumper {
 
     private void writePrivateTraces() throws SQLException, XMLStreamException, IOException, XMLException {
         ResultSet gpxFiles = null;
-        PreparedStatement gpxPointsStatement = getPreparedStatement(
-                "SELECT latitude, longitude, altitude "
-                + "FROM gps_points WHERE gpx_id = ? "
-                + "ORDER BY tile ASC, latitude ASC, longitude ASC");
+        ResultSet gpxPoints = null;
 
         try {
             gpxFiles = executeQuery(
@@ -376,6 +434,11 @@ public class Dumper {
                     + "FROM gpx_files "
                     + "WHERE inserted = true AND visible = true AND visibility = 'private' "
                     + "ORDER BY id");
+
+            PreparedStatement gpxPointsStatement = getPreparedStatement(
+                    "SELECT latitude, longitude, altitude "
+                    + "FROM gps_points WHERE gpx_id = ? "
+                    + "ORDER BY tile ASC, latitude ASC, longitude ASC");
 
             // Only one file for all private traces
             xmlw.writeStartElement("gpxFile");
@@ -392,7 +455,7 @@ public class Dumper {
             writeTrackElementStart(writer, 1);
             while (gpxFiles.next()) {
                 gpxPointsStatement.setLong(1, gpxFiles.getLong(1));
-                ResultSet gpxPoints = gpxPointsStatement.executeQuery();
+                gpxPoints = gpxPointsStatement.executeQuery();
                 writePrivateGpxFile(writer, gpxPoints);
             }
             writeGpxFileEnd(writer);
@@ -401,6 +464,8 @@ public class Dumper {
         } finally {
             if (gpxFiles != null)
                 gpxFiles.close();
+            if (gpxPoints != null)
+                gpxPoints.close();
         }
 
     }
