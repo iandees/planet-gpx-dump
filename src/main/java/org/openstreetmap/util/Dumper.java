@@ -87,7 +87,8 @@ public class Dumper {
       fetchUsers();
       writeGPXHeader(timestamp);
 
-      writeIdentifiableAndPublicTraces();
+      writePublicTraces();
+      writeIdentifiableTraces();
       writeTrackableTraces();
       writePrivateTraces();
 
@@ -168,7 +169,7 @@ public class Dumper {
 
   }
 
-  private void writeIdentifiableAndPublicTraces() throws XMLStreamException, SQLException, IOException {
+  private void writePublicTraces() throws XMLStreamException, SQLException, IOException {
     ResultSet gpxFiles = null;
     ResultSet tags = null;
 
@@ -176,7 +177,7 @@ public class Dumper {
       gpxFiles = executeQuery(
               "SELECT id, user_id, timestamp, name, description, size, latitude, longitude, visibility " +
                       "FROM gpx_files " +
-                      "WHERE inserted = true AND visible = true AND (visibility = 'identifiable' OR visibility = 'public') " +
+                      "WHERE inserted = true AND visible = true AND (visibility = 'public') " +
                       "ORDER BY id");
 
 
@@ -194,12 +195,49 @@ public class Dumper {
                 OSMUtils.convertCoordinateToString(OSMUtils.convertCoordinateToInt(gpxFiles.getDouble(8))));
         xmlw.writeAttribute("visibility", gpxFiles.getString(9));
 
-        if ("identifiable".equals(gpxFiles.getString(9))) {
-          int uid = gpxFiles.getInt(2);
-          if (users.containsKey(uid)) {
-            xmlw.writeAttribute("user", users.get(uid));
-            xmlw.writeAttribute("uid", gpxFiles.getString(2));
-          }
+        writeGpxFileTags(gpxFiles.getInt(1));
+
+        xmlw.writeEndElement();
+
+        fileListFile.write(gpxFolder + gpxFiles.getString(1));
+        fileListFile.write(NEW_LINE);        
+      }
+    } finally {
+      if (gpxFiles != null) gpxFiles.close();
+      if (tags != null) tags.close();
+    }
+  }
+
+  private void writeIdentifiableTraces() throws XMLStreamException, SQLException, IOException {
+    ResultSet gpxFiles = null;
+    ResultSet tags = null;
+
+    try {
+      gpxFiles = executeQuery(
+              "SELECT id, user_id, timestamp, name, description, size, latitude, longitude, visibility " +
+                      "FROM gpx_files " +
+                      "WHERE inserted = true AND visible = true AND (visibility = 'identifiable') " +
+                      "ORDER BY id");
+
+
+      while (gpxFiles.next()) {
+        xmlw.writeStartElement("gpxFile");
+        xmlw.writeAttribute("id", gpxFiles.getString(1));
+        xmlw.writeAttribute("timestamp", OSMUtils.dateFormat.format(gpxFiles.getTimestamp(3)));
+        xmlw.writeAttribute("fileName", Long.toString(gpxFiles.getLong(1)) + ".gpx");
+        xmlw.writeAttribute("originalFileName", gpxFiles.getString(4));
+        xmlw.writeAttribute("description", sanitize(gpxFiles.getString(5)));
+        xmlw.writeAttribute("points", gpxFiles.getString(6));
+        xmlw.writeAttribute("startLatitude",
+                OSMUtils.convertCoordinateToString(OSMUtils.convertCoordinateToInt(gpxFiles.getDouble(7))));
+        xmlw.writeAttribute("startLongitude",
+                OSMUtils.convertCoordinateToString(OSMUtils.convertCoordinateToInt(gpxFiles.getDouble(8))));
+        xmlw.writeAttribute("visibility", gpxFiles.getString(9));
+
+        int uid = gpxFiles.getInt(2);
+        if (users.containsKey(uid)) {
+          xmlw.writeAttribute("user", users.get(uid));
+          xmlw.writeAttribute("uid", gpxFiles.getString(2));
         }
 
         writeGpxFileTags(gpxFiles.getInt(1));
