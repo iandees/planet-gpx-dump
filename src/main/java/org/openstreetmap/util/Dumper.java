@@ -347,14 +347,16 @@ public class Dumper {
 
   private void writePrivateTraces() throws SQLException, XMLStreamException, IOException, XMLException {
     ResultSet gpxFiles = null;
-    PreparedStatement gpxPointsStatement = getPreparedStatement("SELECT latitude, longitude, altitude FROM gps_points WHERE gpx_id = ? ORDER by trackid, timestamp");
+    PreparedStatement gpxPointsStatement = getPreparedStatement("SELECT latitude, longitude, altitude " +
+    		"FROM gps_points WHERE gpx_id = ? " +
+    		"ORDER BY tile ASC, latitude ASC, longitude ASC");
 
     try {
       gpxFiles = executeQuery(
           "SELECT id " +
               "FROM gpx_files " +
               "WHERE inserted = true AND visible = true AND visibility = 'private'" +
-              "ORDER BY tile ASC, latitude ASC, longitude ASC");
+              "ORDER BY id");
 
       // Only one file for all private traces
       xmlw.writeStartElement("gpxFile");
