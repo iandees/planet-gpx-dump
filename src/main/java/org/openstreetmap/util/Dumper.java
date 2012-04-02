@@ -17,12 +17,16 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Dumper {
     private static final int FETCH_SIZE = 10000;
     private static final XMLOutputFactory2 XMLOF = (XMLOutputFactory2) XMLOutputFactory2.newInstance();
     private static final Pattern SANITIZE_PATTERN = Pattern.compile("[\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f]");
     private static final String NEW_LINE = System.getProperty("line.separator");
+
+    private static final Logger log = LoggerFactory.getLogger(Dumper.class);
 
     static {
         XMLOF.setProperty(XMLOutputFactory.IS_REPAIRING_NAMESPACES, Boolean.FALSE);
@@ -47,6 +51,8 @@ public class Dumper {
     private final File gpxOutputFolder;
 
     private final String gpxFolder;
+
+    private int gpxFileCount = 0;
 
     public Dumper(String connectionUrl, File metadataFile, File fileListFile, File gpxOutputFolder, String gpxFolder)
             throws XMLException, DatabaseException, IOException {
@@ -87,12 +93,24 @@ public class Dumper {
         Date timestamp = new Date();
         try {
             fetchUsers();
+
             writeGPXHeader(timestamp);
 
+            log.info("Writing public traces.");
             writePublicTraces();
+            log.info("Done writing public traces.");
+
+            log.info("Writing identifiable traces.");
             writeIdentifiableTraces();
+            log.info("Done writing identifiable traces.");
+
+            log.info("Writing trackable traces.");
             writeTrackableTraces();
+            log.info("Done writing trackable traces.");
+
+            log.info("Writing private traces.");
             writePrivateTraces();
+            log.info("Done writing private traces.");
 
             writeGPXFooter();
             xmlw.flush();
@@ -118,6 +136,8 @@ public class Dumper {
                 throw new XMLException("Problem closing the XML Writer.", e);
             }
         }
+
+        log.info("Done dumping gpx.");
     }
 
     private ResultSet executeQuery(String sql) throws SQLException {
@@ -165,9 +185,13 @@ public class Dumper {
             pstmt.setInt(1, maxUserId);
             rs = pstmt.executeQuery();
 
+            log.debug("Mapping user id to user name.");
+
             while (rs.next()) {
                 users.put(rs.getInt(1), rs.getString(2));
             }
+
+            log.info("Mapped {} usernames.", users.size());
         } finally {
             if (rs != null) {
                 rs.close();
@@ -227,6 +251,12 @@ public class Dumper {
                 // Remember the filename we wrote so it can be included in the
                 // overall dump
                 appendGpxFileToExportList(outputFile);
+                
+                gpxFileCount++;
+
+                if (gpxFileCount % 1000 == 0) {
+                    log.debug("Wrote out {} GPX files.", gpxFileCount);
+                }
             }
         } finally {
             if (gpxFiles != null)
@@ -306,6 +336,12 @@ public class Dumper {
                 xmlw.writeEndElement();
 
                 appendGpxFileToExportList(new File(gpxFolder, gpxFiles.getString(1)));
+                
+                gpxFileCount++;
+
+                if (gpxFileCount % 1000 == 0) {
+                    log.debug("Wrote out {} GPX files.", gpxFileCount);
+                }
             }
         } finally {
             if (gpxFiles != null)
@@ -371,6 +407,12 @@ public class Dumper {
                 // Remember the filename we wrote so it can be included in the
                 // overall dump
                 appendGpxFileToExportList(outputFile);
+
+                gpxFileCount++;
+
+                if (gpxFileCount % 1000 == 0) {
+                    log.debug("Wrote out {} GPX files.", gpxFileCount);
+                }
             }
         } finally {
             if (gpxFiles != null)

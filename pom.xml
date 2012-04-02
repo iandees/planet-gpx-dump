@@ -72,5 +72,12 @@
             <artifactId>woodstox-core-asl</artifactId>
             <version>4.0.8</version>
         </dependency>
+        <dependency>
+        	<groupId>org.slf4j</groupId>
+        	<artifactId>slf4j-simple</artifactId>
+        	<version>1.6.4</version>
+        	<type>jar</type>
+        	<scope>compile</scope>
+        </dependency>
     </dependencies>
 </project>
