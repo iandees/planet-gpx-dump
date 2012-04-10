@@ -223,7 +223,6 @@ public class Dumper {
                 xmlw.writeAttribute("id", gpxFiles.getString(1));
                 xmlw.writeAttribute("timestamp", OSMUtils.dateFormat.format(gpxFiles.getTimestamp(3)));
                 xmlw.writeAttribute("fileName", Long.toString(gpxFiles.getLong(1)) + ".gpx");
-                xmlw.writeAttribute("originalFileName", gpxFiles.getString(4));
                 xmlw.writeAttribute("description", sanitize(gpxFiles.getString(5)));
                 xmlw.writeAttribute("points", gpxFiles.getString(6));
                 xmlw.writeAttribute("startLatitude", OSMUtils.convertCoordinateToString(OSMUtils.convertCoordinateToInt(gpxFiles.getDouble(7))));
@@ -316,7 +315,6 @@ public class Dumper {
                 xmlw.writeAttribute("id", gpxFiles.getString(1));
                 xmlw.writeAttribute("timestamp", OSMUtils.dateFormat.format(gpxFiles.getTimestamp(3)));
                 xmlw.writeAttribute("fileName", Long.toString(gpxFiles.getLong(1)) + ".gpx");
-                xmlw.writeAttribute("originalFileName", gpxFiles.getString(4));
                 xmlw.writeAttribute("description", sanitize(gpxFiles.getString(5)));
                 xmlw.writeAttribute("points", gpxFiles.getString(6));
                 xmlw.writeAttribute("startLatitude", OSMUtils.convertCoordinateToString(OSMUtils.convertCoordinateToInt(gpxFiles.getDouble(7))));
