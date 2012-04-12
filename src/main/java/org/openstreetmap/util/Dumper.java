@@ -297,6 +297,9 @@ public class Dumper {
             writer.writeEndElement(); // </trkpt>
         }
 
+        if (trackId != null) {
+            writeTrackElementEnd(writer);
+        }
     }
 
     private void writeIdentifiableTraces() throws XMLStreamException, SQLException, IOException {
@@ -462,6 +465,9 @@ public class Dumper {
             writer.writeEndElement(); // </trkpt>
         }
 
+        if (trackId != null) {
+            writeTrackElementEnd(writer);
+        }
     }
 
     private void writePrivateTraces() throws SQLException, XMLStreamException, IOException, XMLException {
@@ -498,6 +504,7 @@ public class Dumper {
                 gpxPoints = gpxPointsStatement.executeQuery();
                 writePrivateGpxFile(writer, gpxPoints);
             }
+            writeTrackElementEnd(writer);
             writeGpxFileEnd(writer);
 
             writer.closeCompletely();
@@ -539,7 +546,6 @@ public class Dumper {
     }
 
     private void writeGpxFileEnd(XMLStreamWriter2 writer) throws XMLStreamException {
-        writeTrackElementEnd(writer);
         writer.writeEndElement(); // </gpx>
     }
 
