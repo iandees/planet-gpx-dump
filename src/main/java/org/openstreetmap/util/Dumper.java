@@ -492,7 +492,7 @@ public class Dumper {
             xmlw.writeEndElement();
 
             File outputFile = new File(gpxOutputFolder, "private.gpx");
-            OutputStream out = new new FileOutputStream(outputFile);
+            OutputStream out = new FileOutputStream(outputFile);
             XMLStreamWriter2 writer = createXMLWriter(out);
             appendGpxFileToExportList(outputFile);
 
