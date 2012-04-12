@@ -15,7 +15,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
-import java.util.zip.GZIPOutputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -240,7 +239,7 @@ public class Dumper {
                 File outputFile = new File(gpxOutputFolder, Long.toString(gpxFiles.getLong(1)) + ".gpx.gz");
 
                 // Write individual trackable GPX file
-                OutputStream out = new GZIPOutputStream(new FileOutputStream(outputFile));
+                OutputStream out = new FileOutputStream(outputFile);
                 XMLStreamWriter2 writer = createXMLWriter(out);
                 writeGpxFileStart(writer);
                 writePublicGpxFile(writer, gpxPoints);
@@ -398,7 +397,7 @@ public class Dumper {
                 File outputFile = new File(gpxOutputFolder, Long.toString(gpxFiles.getLong(1)) + ".gpx.gz");
 
                 // Write individual trackable GPX file
-                OutputStream out = new GZIPOutputStream(new FileOutputStream(outputFile));
+                OutputStream out = new FileOutputStream(outputFile);
                 XMLStreamWriter2 writer = createXMLWriter(out);
                 writeGpxFileStart(writer);
                 writeTrackableGpxFile(writer, gpxPoints);
@@ -493,7 +492,7 @@ public class Dumper {
             xmlw.writeEndElement();
 
             File outputFile = new File(gpxOutputFolder, "private.gpx.gz");
-            OutputStream out = new GZIPOutputStream(new FileOutputStream(outputFile));
+            OutputStream out = new new FileOutputStream(outputFile);
             XMLStreamWriter2 writer = createXMLWriter(out);
             appendGpxFileToExportList(outputFile);
 
