@@ -185,7 +185,7 @@ public class Dumper {
             pstmt.setInt(1, maxUserId);
             rs = pstmt.executeQuery();
 
-            log.debug("Mapping user id to user name.");
+            log.info("Mapping user id to user name.");
 
             while (rs.next()) {
                 users.put(rs.getInt(1), rs.getString(2));
@@ -254,7 +254,7 @@ public class Dumper {
                 gpxFileCount++;
 
                 if (gpxFileCount % 1000 == 0) {
-                    log.debug("Wrote out {} GPX files.", gpxFileCount);
+                    log.info("Wrote out {} GPX files.", gpxFileCount);
                 }
             }
         } finally {
@@ -341,7 +341,7 @@ public class Dumper {
                 gpxFileCount++;
 
                 if (gpxFileCount % 1000 == 0) {
-                    log.debug("Wrote out {} GPX files.", gpxFileCount);
+                    log.info("Wrote out {} GPX files.", gpxFileCount);
                 }
             }
         } finally {
@@ -412,7 +412,7 @@ public class Dumper {
                 gpxFileCount++;
 
                 if (gpxFileCount % 1000 == 0) {
-                    log.debug("Wrote out {} GPX files.", gpxFileCount);
+                    log.info("Wrote out {} GPX files.", gpxFileCount);
                 }
             }
         } finally {
