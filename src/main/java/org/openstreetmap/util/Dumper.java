@@ -236,7 +236,7 @@ public class Dumper {
                 gpxPointsStatement.setLong(1, gpxFiles.getLong(1));
                 gpxPoints = gpxPointsStatement.executeQuery();
 
-                File outputFile = new File(gpxOutputFolder, Long.toString(gpxFiles.getLong(1)) + ".gpx.gz");
+                File outputFile = new File(gpxOutputFolder, Long.toString(gpxFiles.getLong(1)) + ".gpx");
 
                 // Write individual trackable GPX file
                 OutputStream out = new FileOutputStream(outputFile);
@@ -382,7 +382,7 @@ public class Dumper {
                 xmlw.writeStartElement("gpxFile");
                 xmlw.writeAttribute("id", gpxFiles.getString(1));
                 xmlw.writeAttribute("timestamp", OSMUtils.dateFormat.format(gpxFiles.getTimestamp(2)));
-                xmlw.writeAttribute("fileName", gpxFiles.getLong(1) + ".gpx.gz");
+                xmlw.writeAttribute("fileName", gpxFiles.getLong(1) + ".gpx");
                 xmlw.writeAttribute("points", gpxFiles.getString(4));
                 xmlw.writeAttribute("startLatitude", OSMUtils.convertCoordinateToString(OSMUtils.convertCoordinateToInt(gpxFiles.getDouble(5))));
                 xmlw.writeAttribute("startLongitude", OSMUtils.convertCoordinateToString(OSMUtils.convertCoordinateToInt(gpxFiles.getDouble(6))));
@@ -394,7 +394,7 @@ public class Dumper {
                 gpxPointsStatement.setLong(1, gpxFiles.getLong(1));
                 gpxPoints = gpxPointsStatement.executeQuery();
 
-                File outputFile = new File(gpxOutputFolder, Long.toString(gpxFiles.getLong(1)) + ".gpx.gz");
+                File outputFile = new File(gpxOutputFolder, Long.toString(gpxFiles.getLong(1)) + ".gpx");
 
                 // Write individual trackable GPX file
                 OutputStream out = new FileOutputStream(outputFile);
@@ -487,11 +487,11 @@ public class Dumper {
 
             // Only one file for all private traces
             xmlw.writeStartElement("gpxFile");
-            xmlw.writeAttribute("fileName", "private.gpx.gz");
+            xmlw.writeAttribute("fileName", "private.gpx");
             xmlw.writeAttribute("visibility", "private");
             xmlw.writeEndElement();
 
-            File outputFile = new File(gpxOutputFolder, "private.gpx.gz");
+            File outputFile = new File(gpxOutputFolder, "private.gpx");
             OutputStream out = new new FileOutputStream(outputFile);
             XMLStreamWriter2 writer = createXMLWriter(out);
             appendGpxFileToExportList(outputFile);
