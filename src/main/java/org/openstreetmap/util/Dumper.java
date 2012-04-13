@@ -335,7 +335,7 @@ public class Dumper {
 
                 xmlw.writeEndElement();
 
-                appendGpxFileToExportList(new File(gpxFolder, gpxFiles.getString(1)));
+                appendGpxFileToExportList(new File(gpxFolder, gpxFiles.getString(1)  + ".gpx"));
                 
                 gpxFileCount++;
 
