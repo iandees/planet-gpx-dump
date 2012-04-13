@@ -27,10 +27,6 @@ public class PlanetGpxDump {
 
         File metadataFile = new File(cmd.getOptionValue("m"));
         File fileListFile = new File(cmd.getOptionValue("f"));
-        String gpxFolder = cmd.getOptionValue("g");
-        if (gpxFolder == null) {
-          gpxFolder = "";
-        }
 
         if (metadataFile.exists() || fileListFile.exists()) {
           System.err.println("The metadata file or file list file already exist. Please delete or move them.");
@@ -44,7 +40,7 @@ public class PlanetGpxDump {
         }
 
         try {
-            Dumper dumper = new Dumper(connectionUrl, metadataFile, fileListFile, extraGpxOutputFolder, gpxFolder);
+            Dumper dumper = new Dumper(connectionUrl, metadataFile, fileListFile, extraGpxOutputFolder);
             dumper.dump();
             System.exit(0);
         } catch (XMLException e) {
@@ -75,7 +71,6 @@ public class PlanetGpxDump {
         options.addOption("m", "metadatafilename", true, "[required] specifies the name of the XML file which includes the metadata for all the GPX files. Must not exist.");
         options.addOption("f", "filelistname", true, "[required] specifies the name of the file where the list of GPX files to export is written to. Must not exist.");
         options.addOption("e", "extragpxfolder", true, "[required] specifies the folder where the Private and Trackable traces should be written to. Must exist.");
-        options.addOption("g", "gpxfolder", true, "specifies a path that should be appended to every public and identifiable GPX file in the metadata file. No checks are mode for existence. Should end in a '/'");
 
         options.addOption("h", "help", false, "print this help and exit");
 

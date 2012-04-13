@@ -49,17 +49,14 @@ public class Dumper {
     private final FileWriter fileListFile;
     private final File gpxOutputFolder;
 
-    private final String gpxFolder;
-
     private int gpxFileCount = 0;
 
-    public Dumper(String connectionUrl, File metadataFile, File fileListFile, File gpxOutputFolder, String gpxFolder)
+    public Dumper(String connectionUrl, File metadataFile, File fileListFile, File gpxOutputFolder)
             throws XMLException, DatabaseException, IOException {
         xmlw = createXMLWriter(new FileOutputStream(metadataFile));
         createDatabaseConnection(connectionUrl);
         this.fileListFile = new FileWriter(fileListFile);
         this.gpxOutputFolder = gpxOutputFolder;
-        this.gpxFolder = gpxFolder;
     }
 
     private void createDatabaseConnection(String connectionUrl) throws DatabaseException {
@@ -335,7 +332,7 @@ public class Dumper {
 
                 xmlw.writeEndElement();
 
-                appendGpxFileToExportList(new File(gpxFolder, gpxFiles.getString(1)  + ".gpx"));
+                appendGpxFileToExportList(new File(gpxOutputFolder, gpxFiles.getString(1)  + ".gpx"));
                 
                 gpxFileCount++;
 
