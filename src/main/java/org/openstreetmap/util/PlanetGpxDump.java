@@ -31,20 +31,20 @@ public class PlanetGpxDump {
         String gpxFolderStr = cmd.getOptionValue("g");
         File gpxFolder;
         if (gpxFolderStr == null) {
-          gpxFolder = new File("");
+            gpxFolder = new File("");
         } else {
-          gpxFolder = new File(gpxFolderStr);
+            gpxFolder = new File(gpxFolderStr);
         }
 
         if (metadataFile.exists() || fileListFile.exists()) {
-          System.err.println("The metadata file or file list file already exist. Please delete or move them.");
-          System.exit(1);
+            System.err.println("The metadata file or file list file already exist. Please delete or move them.");
+            System.exit(1);
         }
 
         File extraGpxOutputFolder = new File(cmd.getOptionValue("e"));
         if (!extraGpxOutputFolder.exists()) {
-          System.err.println("The output folder for the GPX files doesn't exist. Please create it first.");
-          System.exit(1);
+            System.err.println("The output folder for the GPX files doesn't exist. Please create it first.");
+            System.exit(1);
         }
 
         try {
