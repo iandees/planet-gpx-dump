@@ -48,15 +48,17 @@ public class Dumper {
 
     private final FileWriter fileListFile;
     private final File gpxOutputFolder;
+    private final File gpxIdentifiableFolder;
 
     private int gpxFileCount = 0;
 
-    public Dumper(String connectionUrl, File metadataFile, File fileListFile, File gpxOutputFolder)
+    public Dumper(String connectionUrl, File metadataFile, File fileListFile, File gpxOutputFolder, File gpxFolder)
             throws XMLException, DatabaseException, IOException {
         xmlw = createXMLWriter(new FileOutputStream(metadataFile));
         createDatabaseConnection(connectionUrl);
         this.fileListFile = new FileWriter(fileListFile);
         this.gpxOutputFolder = gpxOutputFolder;
+        this.gpxIdentifiableFolder = gpxFolder;
     }
 
     private void createDatabaseConnection(String connectionUrl) throws DatabaseException {
@@ -309,6 +311,7 @@ public class Dumper {
                     + "WHERE inserted = true AND visible = true AND (visibility = 'identifiable') "
                     + "ORDER BY id");
 
+            File gpxBaseDir;
             while (gpxFiles.next()) {
                 xmlw.writeStartElement("gpxFile");
                 xmlw.writeAttribute("id", gpxFiles.getString(1));
@@ -332,7 +335,7 @@ public class Dumper {
 
                 xmlw.writeEndElement();
 
-                appendGpxFileToExportList(new File(gpxOutputFolder, gpxFiles.getString(1)  + ".gpx"));
+                appendGpxFileToExportList(new File(gpxIdentifiableFolder, gpxFiles.getString(1)  + ".gpx"));
                 
                 gpxFileCount++;
 
