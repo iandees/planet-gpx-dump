@@ -5,6 +5,12 @@ import os
 import sys
 import datetime
 
+
+def status_line(text):
+    sys.stdout.write(text)
+    sys.stdout.write('\r')
+    sys.stdout.flush()
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Dumps GPX files from the OSM railsport database schema.")
 
@@ -130,6 +136,9 @@ if __name__ == '__main__':
             metadata_file.write(filesElem.toxml('utf-8'))
 
             files_so_far += 1
+
+            if files_so_far % 1000 == 0:
+                status_line("Wrote out %-7d GPX files." % files_so_far)
 
         print "Done writing public traces."
 
