@@ -53,6 +53,8 @@ if __name__ == '__main__':
     tags_cursor = conn.cursor(name='gpx_file_tags')
     point_cursor = conn.cursor(name='gpx_points')
 
+    files_so_far = 0
+
     if 'public' in args.privacy:
         print "Writing public traces."
         file_cursor.execute("""SELECT id,user_id,timestamp,name,description,size,latitude,longitude,visibility
@@ -77,8 +79,6 @@ if __name__ == '__main__':
                 tagElem = doc.createElement("tag")
                 tagElem.data = tag[1]
                 filesElem.appendChild(tagElem)
-
-            metadata_file.write(filesElem.toxml('utf-8'))
 
             # Write out GPX file
             # Important to note that we are not including timestamp here because it's public.
@@ -120,6 +120,16 @@ if __name__ == '__main__':
                     ptElem.appendChild(eleElem)
 
                 trkElem.appendChild(ptElem)
+
+            file_path = "%s/public/%-10d.gpx" % (args.output, row[1])
+            gpx_file = open(file_path, 'w')
+            gpx_file.write(gpxDoc.toxml('utf-8'))
+            gpx_file.close()
+
+            filesElem.setAttribute("filename", file_path)
+            metadata_file.write(filesElem.toxml('utf-8'))
+
+            files_so_far += 1
 
         print "Done writing public traces."
 
