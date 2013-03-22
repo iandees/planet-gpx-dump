@@ -46,10 +46,7 @@ if __name__ == '__main__':
 
     doc = Document()
     metadata_file = open("%s/%s" % (args.output, args.metadata), 'w')
-    filesElem = doc.createElement("gpxFiles")
-    filesElem.setAttribute("generator", "OpenStreetMap gpx_dump.py")
-    filesElem.setAttribute("timestamp", datetime.datetime.utcnow().isoformat())
-    metadata_file.write(filesElem.toxml('utf-8'))
+    metadata_file.write('<gpxFiles generator="OpenStreetMap gpx_dump.py" timestamp="%s">\n' % datetime.datetime.utcnow().replace(microsecond=0).isoformat())
 
     conn = psycopg2.connect(database=args.database, user=args.user, password=args.password, host=args.host)
     file_cursor = conn.cursor(name='gpx_files')
