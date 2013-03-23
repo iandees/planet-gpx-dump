@@ -32,7 +32,7 @@ if __name__ == '__main__':
     # GPX dumping options
     parser.add_argument("--privacy",
         help="select which privacy levels to write out",
-        choices=['public', 'identifiable', 'trackable', 'private'],
+        choices=['public', 'identifiable', 'trackable'],
         default=['public', 'identifiable', 'trackable'])
     parser.add_argument("--output",
         help="output directory to fill with resulting GPX files",
@@ -57,20 +57,19 @@ if __name__ == '__main__':
 
     conn = psycopg2.connect(database=args.database, user=args.user, password=args.password, host=args.host)
     file_cursor = conn.cursor(name='gpx_files')
-    tags_cursor = conn.cursor(name='gpx_file_tags')
-    point_cursor = conn.cursor(name='gpx_points')
+    tags_cursor = conn.cursor()
 
     print "Mapping user IDs."
     user_map = dict()
     user_cursor = conn.cursor(name='users')
-    user_cursor.execute("SELECT id,display_name FROM users")
+    user_cursor.execute("""SELECT id,display_name FROM users""")
     for user in user_cursor:
         user_map[user[0]] = user[1]
     print "Mapped %s user ids." % (len(user_map))
 
     files_so_far = 0
 
-    for d in ('public', 'trackable', 'private', 'identifiable'):
+    for d in args.privacy:
         path = '%s/%s' % (args.output, d)
         try:
             os.makedirs(path)
@@ -83,7 +82,7 @@ if __name__ == '__main__':
     print "Writing traces."
     file_cursor.execute("""SELECT id,user_id,timestamp,name,description,size,latitude,longitude,visibility
                            FROM gpx_files
-                           WHERE inserted=true AND visible=true AND visibility='public'
+                           WHERE inserted=true AND visible=true AND visibility IN ('public', 'trackable', 'identifiable')
                            ORDER BY id""")
     for row in file_cursor:
         if row[8] == 'private':
@@ -95,8 +94,8 @@ if __name__ == '__main__':
         filesElem.setAttribute("timestamp", row[2].isoformat())
         filesElem.setAttribute("description", row[4])
         filesElem.setAttribute("points", str(row[5]))
-        filesElem.setAttribute("startLatitude", str(row[6]))
-        filesElem.setAttribute("startLongitude", str(row[7]))
+        filesElem.setAttribute("startLatitude", "%0.7f" % (row[6],))
+        filesElem.setAttribute("startLongitude", "%0.7f" % (row[7],))
         filesElem.setAttribute("visibility", row[8])
 
         # Only write out user information if it's identifiable or public
@@ -114,12 +113,11 @@ if __name__ == '__main__':
             filesElem.appendChild(tagElem)
 
         # Write out GPX file
-        # Important to note that we are not including timestamp here because it's public.
-        # See http://wiki.openstreetmap.org/wiki/Visibility_of_GPS_traces
-        point_cursor.execute("""SELECT latitude,longitude,altitude,trackid,timestamp
+        point_cursor = conn.cursor(name='gpx_points')
+        point_cursor.execute("""SELECT latitude,longitude,altitude,trackid,"timestamp"
                                 FROM gps_points
                                 WHERE gpx_id=%s
-                                ORDER BY trackid ASC, tile ASC, latitude ASC, longitude ASC""", [row[0]])
+                                ORDER BY trackid ASC, "timestamp" ASC""", [row[0]])
 
         gpxDoc = Document()
         gpxElem = gpxDoc.createElement("gpx")
@@ -146,8 +144,8 @@ if __name__ == '__main__':
                 gpxElem.appendChild(trkElem)
 
             ptElem = gpxDoc.createElement("trkpt")
-            ptElem.setAttribute("lat", "%0.7f" % (float(point[0]) / (10 ** 7)))
-            ptElem.setAttribute("lon", "%0.7f" % (float(point[1]) / (10 ** 7)))
+            ptElem.setAttribute("lat", "%0.7f" % (float(point[0]) / MULTI_FACTOR))
+            ptElem.setAttribute("lon", "%0.7f" % (float(point[1]) / MULTI_FACTOR))
             if point[2]:
                 eleElem = gpxDoc.createElement("ele")
                 eleElem.appendChild(gpxDoc.createTextNode("%0.2f" % point[2]))
@@ -159,6 +157,8 @@ if __name__ == '__main__':
                 ptElem.appendChild(timeElem)
 
             segmentElem.appendChild(ptElem)
+
+        point_cursor.close()
 
         file_path = "%s/%s/%07d.gpx" % (args.output, row[8], row[0])
         gpx_file = open(file_path, 'w')
