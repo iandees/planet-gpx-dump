@@ -78,13 +78,12 @@ if __name__ == '__main__':
         for row in file_cursor:
             # Write out the metadata about this GPX file to the metadata list
             filesElem = doc.createElement("gpxFile")
-            filesElem.setAttribute("id", row[1])
+            filesElem.setAttribute("id", str(row[1]))
             filesElem.setAttribute("timestamp", row[3].isoformat())
-            filesElem.setAttribute("fileName", row[1])
             filesElem.setAttribute("description", row[5])
-            filesElem.setAttribute("points", row[6])
-            filesElem.setAttribute("startLatitude", row[7])
-            filesElem.setAttribute("startLongitude", row[8])
+            filesElem.setAttribute("points", str(row[6]))
+            filesElem.setAttribute("startLatitude", str(row[7]))
+            filesElem.setAttribute("startLongitude", str(row[8]))
             filesElem.setAttribute("visibility", row[9])
 
             tags_cursor.execute("""SELECT tag FROM gpx_file_tags WHERE gpx_id=%s""", (row[1]))
@@ -107,6 +106,7 @@ if __name__ == '__main__':
             gpxElem.setAttribute("xmlns", "http://www.topografix.com/GPX/1/0")
             gpxElem.setAttribute("version", "1.0")
             gpxElem.setAttribute("creator", "OSM gpx_dump.py")
+            gpxDoc.appendChild(gpxElem)
 
             trackid = None
             for point in point_cursor:
@@ -114,11 +114,11 @@ if __name__ == '__main__':
                     trackid = point[4]
                     trkElem = gpxDoc.createElement("trk")
                     nameElem = gpxDoc.createElement("name")
-                    nameElem.data = "Track %s" % (trackid)
+                    nameElem.appendChild(gpxDoc.createTextNode("Track %s" % (trackid)))
                     trkElem.appendChild(nameElem)
 
                     numberElem = gpxDoc.createElement("number")
-                    numberElem.data = str(trackid)
+                    numberElem.appendChild(gpxDoc.createTextNode(str(trackid)))
                     trkElem.appendChild(numberElem)
 
                     segmentElem = gpxDoc.createElement("trkseg")
@@ -126,27 +126,27 @@ if __name__ == '__main__':
                     gpxElem.appendChild(trkElem)
 
                 ptElem = gpxDoc.createElement("trkpt")
-                ptElem.setAttribute("lat", "%.7f" % float(point[1]) / 10 ^ 7)
-                ptElem.setAttribute("lon", "%.7f" % float(point[2]) / 10 ^ 7)
+                ptElem.setAttribute("lat", "%0.7f" % (float(point[1]) / (10 ** 7)))
+                ptElem.setAttribute("lon", "%0.7f" % (float(point[2]) / (10 ** 7)))
                 if point[3]:
                     eleElem = gpxDoc.createElement("ele")
-                    eleElem.data = "ele", "%0.2f" % point[3]
+                    eleElem.appendChild(gpxDoc.createTextNode("%0.2f" % point[3]))
                     ptElem.appendChild(eleElem)
 
-                trkElem.appendChild(ptElem)
+                segmentElem.appendChild(ptElem)
 
-            file_path = "%s/public/%-10d.gpx" % (args.output, row[1])
+            file_path = "%s/public/%07d.gpx" % (args.output, row[1])
             gpx_file = open(file_path, 'w')
-            gpx_file.write(gpxDoc.toxml('utf-8'))
+            gpx_file.write(gpxDoc.toprettyxml(' ', encoding='utf-8'))
             gpx_file.close()
 
             filesElem.setAttribute("filename", file_path)
-            metadata_file.write(filesElem.toxml('utf-8'))
+            metadata_file.write(filesElem.toprettyxml(' ', encoding='utf-8'))
 
             files_so_far += 1
 
             if files_so_far % 1000 == 0:
-                status_line("Wrote out %-7d GPX files." % files_so_far)
+                status_line("Wrote out %07d GPX files." % files_so_far)
 
         print "Done writing public traces."
 
