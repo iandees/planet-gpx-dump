@@ -59,6 +59,14 @@ if __name__ == '__main__':
     tags_cursor = conn.cursor(name='gpx_file_tags')
     point_cursor = conn.cursor(name='gpx_points')
 
+    print "Mapping user IDs."
+    user_map = dict()
+    user_cursor = conn.cursor(name='users')
+    user_cursor.execute("SELECT id,display_name FROM users")
+    for user in user_cursor:
+        user_map[user[1]] = user[2]
+    print "Mapped %s user ids." % (len(user_map))
+
     files_so_far = 0
 
     if 'public' in args.privacy:
@@ -144,6 +152,90 @@ if __name__ == '__main__':
 
     if 'identifiable' in args.privacy:
         print "Writing identifiable traces."
+        file_cursor.execute("""SELECT id,user_id,timestamp,name,description,size,latitude,longitude,visibility
+                               FROM gpx_files
+                               WHERE inserted=true AND visible=true AND visibility='public'
+                               ORDER BY id""")
+        for row in file_cursor:
+            # Write out the metadata about this GPX file to the metadata list
+            filesElem = doc.createElement("gpxFile")
+            filesElem.setAttribute("id", row[1])
+            filesElem.setAttribute("timestamp", row[3].isoformat())
+            filesElem.setAttribute("fileName", row[1])
+            filesElem.setAttribute("description", row[5])
+            filesElem.setAttribute("points", row[6])
+            filesElem.setAttribute("startLatitude", row[7])
+            filesElem.setAttribute("startLongitude", row[8])
+            filesElem.setAttribute("visibility", row[9])
+
+            uid = row[2]
+            filesElem.setAttribute("uid", uid)
+
+            if uid in user_map:
+                filesElem.setAttribute("user", user_map[uid])
+
+            tags_cursor.execute("""SELECT tag FROM gpx_file_tags WHERE gpx_id=%s""", (row[1]))
+
+            for tag in tags_cursor:
+                tagElem = doc.createElement("tag")
+                tagElem.data = tag[1]
+                filesElem.appendChild(tagElem)
+
+            # Write out GPX file
+            point_cursor.execute("""SELECT latitude,longitude,altitude,trackid,timestamp
+                                    FROM gps_points
+                                    WHERE gpx_id=%s
+                                    ORDER BY trackid ASC, timestamp ASC""", (row[1]))
+
+            gpxDoc = Document()
+            gpxElem = gpxDoc.createElement("gpx")
+            gpxElem.setAttribute("xmlns", "http://www.topografix.com/GPX/1/0")
+            gpxElem.setAttribute("version", "1.0")
+            gpxElem.setAttribute("creator", "OSM gpx_dump.py")
+
+            trackid = None
+            for point in point_cursor:
+                if trackid is None or trackid != point[4]:
+                    trackid = point[4]
+                    trkElem = gpxDoc.createElement("trk")
+                    nameElem = gpxDoc.createElement("name")
+                    nameElem.data = "Track %s" % (trackid)
+                    trkElem.appendChild(nameElem)
+
+                    numberElem = gpxDoc.createElement("number")
+                    numberElem.data = str(trackid)
+                    trkElem.appendChild(numberElem)
+
+                    segmentElem = gpxDoc.createElement("trkseg")
+                    trkElem.appendChild(segmentElem)
+                    gpxElem.appendChild(trkElem)
+
+                ptElem = gpxDoc.createElement("trkpt")
+                ptElem.setAttribute("lat", "%.7f" % float(point[1]) / 10 ^ 7)
+                ptElem.setAttribute("lon", "%.7f" % float(point[2]) / 10 ^ 7)
+                if point[3]:
+                    eleElem = gpxDoc.createElement("ele")
+                    eleElem.data = "%0.2f" % point[3]
+                    ptElem.appendChild(eleElem)
+
+                if point[4]:
+                    timeElem = gpxDoc.createElement("time")
+                    timeElem.data = point[4].isoformat()
+
+                trkElem.appendChild(ptElem)
+
+            file_path = "%s/public/%-10d.gpx" % (args.output, row[1])
+            gpx_file = open(file_path, 'w')
+            gpx_file.write(gpxDoc.toxml('utf-8'))
+            gpx_file.close()
+
+            filesElem.setAttribute("filename", file_path)
+            metadata_file.write(filesElem.toxml('utf-8'))
+
+            files_so_far += 1
+
+            if files_so_far % 1000 == 0:
+                status_line("Wrote out %-7d GPX files." % files_so_far)
         print "Done writing identifiable traces."
 
     if 'trackable' in args.privacy:
