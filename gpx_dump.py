@@ -6,6 +6,10 @@ import errno
 import sys
 import datetime
 
+# Lat/lon in the gps_points schema is stored as an int with the decimal
+# shifted by seven places.
+MULTI_FACTOR = 10 ** 7
+
 
 def status_line(text):
     sys.stdout.write(text)
