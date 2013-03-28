@@ -42,9 +42,16 @@ if __name__ == '__main__':
     parser.add_argument("--output",
         help="output directory to fill with resulting GPX files",
         default=".")
-    parser.add_argument("--metadata",
-        help="file inside output directory to write metadata about uploaded GPX files (tags, visibility, etc.)",
-        default="metadata.xml")
+
+    # Extraneous options
+    parser.add_argument("--enable-tags",
+        help="enable dumping tags to the metadata for each gpx file",
+        default=True,
+        type=bool)
+    parser.add_argument("--enable-uid-mapping",
+        help="enable userid to username mapping",
+        default=True,
+        type=bool)
 
     args = parser.parse_args()
 
@@ -52,11 +59,11 @@ if __name__ == '__main__':
         sys.stderr.write("Output directory doesn't exist.\n")
         sys.exit(-1)
 
-    if os.path.exists("%s/%s" % (args.output, args.metadata)):
+    if os.path.exists("%s/metadata.xml" % (args.output)):
         sys.stderr.write("Metadata file already exists.\n")
         sys.exit(-1)
 
-    metadata_file = open("%s/%s" % (args.output, args.metadata), 'w')
+    metadata_file = open("%s/metadata.xml" % (args.output), 'w')
     metadata_file.write('<gpxFiles generator="OpenStreetMap gpx_dump.py" timestamp="%s">\n' % datetime.datetime.utcnow().replace(microsecond=0).isoformat())
 
     if args.host:
@@ -66,13 +73,14 @@ if __name__ == '__main__':
     file_cursor = conn.cursor(name='gpx_files')
     tags_cursor = conn.cursor()
 
-    print "Mapping user IDs."
     user_map = dict()
-    user_cursor = conn.cursor(name='users')
-    user_cursor.execute("""SELECT id,display_name FROM users""")
-    for user in user_cursor:
-        user_map[user[0]] = user[1]
-    print "Mapped %s user ids." % (len(user_map))
+    if args.enable_uid_mapping:
+        print "Mapping user IDs."
+        user_cursor = conn.cursor(name='users')
+        user_cursor.execute("""SELECT id,display_name FROM users""")
+        for user in user_cursor:
+            user_map[user[0]] = user[1]
+        print "Mapped %s user ids." % (len(user_map))
 
     files_so_far = 0
 
@@ -112,12 +120,12 @@ if __name__ == '__main__':
             if row[1] in user_map:
                 filesElem.attrib["user"] = user_map.get(row[1])
 
-        tags_cursor.execute("""SELECT tag FROM gpx_file_tags WHERE gpx_id=%s""", [row[0]])
+        if args.enable_tags:
+            tags_cursor.execute("""SELECT tag FROM gpx_file_tags WHERE gpx_id=%s""", [row[0]])
 
-        for tag in tags_cursor:
-            tagElem = doc.createElement("tag")
-            tagElem.appendChild(doc.createTextNode(tag[0]))
-            filesElem.appendChild(tagElem)
+            for tag in tags_cursor:
+                tagElem = etree.SubElement(filesElem, "tag")
+                tagElem.text = tag[0]
 
         # Write out GPX file
         point_cursor = conn.cursor(name='gpx_points')
