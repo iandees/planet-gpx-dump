@@ -1,5 +1,5 @@
 import psycopg2
-from xml.dom.minidom import Document
+from lxml import etree
 import argparse
 import os
 import errno
@@ -56,7 +56,6 @@ if __name__ == '__main__':
         sys.stderr.write("Metadata file already exists.\n")
         sys.exit(-1)
 
-    doc = Document()
     metadata_file = open("%s/%s" % (args.output, args.metadata), 'w')
     metadata_file.write('<gpxFiles generator="OpenStreetMap gpx_dump.py" timestamp="%s">\n' % datetime.datetime.utcnow().replace(microsecond=0).isoformat())
 
@@ -97,21 +96,21 @@ if __name__ == '__main__':
             continue
 
         # Write out the metadata about this GPX file to the metadata list
-        filesElem = doc.createElement("gpxFile")
-        filesElem.setAttribute("id", str(row[0]))
-        filesElem.setAttribute("timestamp", row[2].isoformat())
-        filesElem.setAttribute("description", row[4])
-        filesElem.setAttribute("points", str(row[5]))
-        filesElem.setAttribute("startLatitude", "%0.7f" % (row[6],))
-        filesElem.setAttribute("startLongitude", "%0.7f" % (row[7],))
-        filesElem.setAttribute("visibility", row[8])
+        filesElem = etree.Element("gpxFile")
+        filesElem.attrib["id"] = str(row[0])
+        filesElem.attrib["timestamp"] = row[2].isoformat()
+        filesElem.attrib["description"] = row[4]
+        filesElem.attrib["points"] = str(row[5])
+        filesElem.attrib["startLatitude"] = "%0.7f" % (row[6],)
+        filesElem.attrib["startLongitude"] = "%0.7f" % (row[7],)
+        filesElem.attrib["visibility"] = row[8]
 
         # Only write out user information if it's identifiable or public
         if row[1] and row[8] in ('identifiable', 'public'):
-            filesElem.setAttribute("uid", str(row[1]))
+            filesElem.attrib["uid"] = str(row[1])
 
             if row[1] in user_map:
-                filesElem.setAttribute("user", user_map.get(row[1]))
+                filesElem.attrib["user"] = user_map.get(row[1])
 
         tags_cursor.execute("""SELECT tag FROM gpx_file_tags WHERE gpx_id=%s""", [row[0]])
 
@@ -127,54 +126,42 @@ if __name__ == '__main__':
                                 WHERE gpx_id=%s
                                 ORDER BY trackid ASC, "timestamp" ASC""", [row[0]])
 
-        gpxDoc = Document()
-        gpxElem = gpxDoc.createElement("gpx")
-        gpxElem.setAttribute("xmlns", "http://www.topografix.com/GPX/1/0")
-        gpxElem.setAttribute("version", "1.0")
-        gpxElem.setAttribute("creator", "OSM gpx_dump.py")
-        gpxDoc.appendChild(gpxElem)
+        gpxElem = etree.Element("gpx")
+        gpxElem.attrib["xmlns"] = "http://www.topografix.com/GPX/1/0"
+        gpxElem.attrib["version"] = "1.0"
+        gpxElem.attrib["creator"] = "OSM gpx_dump.py"
 
         trackid = None
         for point in point_cursor:
             if trackid is None or trackid != point[3]:
                 trackid = point[3]
-                trkElem = gpxDoc.createElement("trk")
-                nameElem = gpxDoc.createElement("name")
-                nameElem.appendChild(gpxDoc.createTextNode("Track %s" % (trackid)))
-                trkElem.appendChild(nameElem)
+                trkElem = etree.SubElement(gpxElem, "trk")
+                nameElem = etree.SubElement(trkElem, "name")
+                nameElem.text = "Track %s" % (trackid)
 
-                numberElem = gpxDoc.createElement("number")
-                numberElem.appendChild(gpxDoc.createTextNode(str(trackid)))
-                trkElem.appendChild(numberElem)
+                numberElem = etree.SubElement(trkElem, "number")
+                numberElem.text = str(trackid)
 
-                segmentElem = gpxDoc.createElement("trkseg")
-                trkElem.appendChild(segmentElem)
-                gpxElem.appendChild(trkElem)
+                segmentElem = etree.SubElement(trkElem, "trkseg")
 
-            ptElem = gpxDoc.createElement("trkpt")
-            ptElem.setAttribute("lat", "%0.7f" % (float(point[0]) / MULTI_FACTOR))
-            ptElem.setAttribute("lon", "%0.7f" % (float(point[1]) / MULTI_FACTOR))
+            ptElem = etree.SubElement(segmentElem, "trkpt")
+            ptElem.attrib["lat"] = "%0.7f" % (float(point[0]) / MULTI_FACTOR)
+            ptElem.attrib["lon"] = "%0.7f" % (float(point[1]) / MULTI_FACTOR)
             if point[2]:
-                eleElem = gpxDoc.createElement("ele")
-                eleElem.appendChild(gpxDoc.createTextNode("%0.2f" % point[2]))
-                ptElem.appendChild(eleElem)
+                eleElem = etree.SubElement(ptElem, "ele")
+                eleElem.text = "%0.2f" % point[2]
 
             if point[4] and row[8] in ('identifiable', 'trackable'):
-                timeElem = gpxDoc.createElement("time")
-                timeElem.appendChild(gpxDoc.createTextNode(point[4].isoformat()))
-                ptElem.appendChild(timeElem)
-
-            segmentElem.appendChild(ptElem)
+                timeElem = etree.SubElement(ptElem, "time")
+                timeElem.text = point[4].isoformat()
 
         point_cursor.close()
 
         file_path = "%s/%s/%07d.gpx" % (args.output, row[8], row[0])
-        gpx_file = open(file_path, 'w')
-        gpx_file.write(gpxDoc.toprettyxml(' ', encoding='utf-8'))
-        gpx_file.close()
+        etree.ElementTree(gpxElem).write(file_path, xml_declaration=True, pretty_print=True, encoding='utf-8')
 
-        filesElem.setAttribute("filename", file_path)
-        metadata_file.write(filesElem.toprettyxml(' ', encoding='utf-8'))
+        filesElem.attrib["filename"] = file_path
+        metadata_file.write(etree.tostring(filesElem, pretty_print=True, encoding='utf-8'))
 
         files_so_far += 1
 
