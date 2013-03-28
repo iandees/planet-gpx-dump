@@ -165,8 +165,7 @@ if __name__ == '__main__':
 
         files_so_far += 1
 
-        if files_so_far % 1000 == 0:
-            status_line("Wrote out %7d GPX files." % files_so_far)
+        status_line("Wrote out %7d GPX files." % files_so_far)
 
     print "Wrote out %7d GPX files." % files_so_far
 
