@@ -21,14 +21,15 @@ if __name__ == '__main__':
 
     # Postgres options
     parser.add_argument("--host",
-        help="postgres server host",
-        required=True)
+        help="postgres server host")
+    parser.add_argument("--port",
+        help="postgres server port",
+        default="5432",
+        type=int)
     parser.add_argument("--user",
-        help="postgres user name",
-        required=True)
+        help="postgres user name")
     parser.add_argument("--password",
-        help="postgres user password",
-        required=True)
+        help="postgres user password")
     parser.add_argument("--database",
         help="postgres database name",
         required=True)
@@ -59,7 +60,10 @@ if __name__ == '__main__':
     metadata_file = open("%s/%s" % (args.output, args.metadata), 'w')
     metadata_file.write('<gpxFiles generator="OpenStreetMap gpx_dump.py" timestamp="%s">\n' % datetime.datetime.utcnow().replace(microsecond=0).isoformat())
 
-    conn = psycopg2.connect(database=args.database, user=args.user, password=args.password, host=args.host)
+    if args.host:
+        conn = psycopg2.connect(database=args.database, port=args.port, user=args.user, password=args.password, host=args.host)
+    else:
+        conn = psycopg2.connect(database=args.database, port=args.port, user=args.user)
     file_cursor = conn.cursor(name='gpx_files')
     tags_cursor = conn.cursor()
 
