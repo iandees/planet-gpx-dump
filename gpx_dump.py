@@ -44,14 +44,16 @@ if __name__ == '__main__':
         default=".")
 
     # Extraneous options
-    parser.add_argument("--enable-tags",
-        help="enable dumping tags to the metadata for each gpx file",
+    parser.add_argument("--disable-tags",
+        help="disable dumping tags to the metadata for each gpx file",
+        dest="enable_tags",
         default=True,
-        type=bool)
-    parser.add_argument("--enable-uid-mapping",
-        help="enable userid to username mapping",
+        action="store_false")
+    parser.add_argument("--disable-uid-mapping",
+        help="disable userid to username mapping",
+        dest="enable_uid_mapping",
         default=True,
-        type=bool)
+        action="store_false")
 
     args = parser.parse_args()
 
