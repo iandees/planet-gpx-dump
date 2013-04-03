@@ -105,8 +105,8 @@ if __name__ == '__main__':
         filesElem.attrib["id"] = str(row['id'])
         filesElem.attrib["timestamp"] = row['timestamp'].isoformat()
         filesElem.attrib["points"] = str(row['size'])
-        filesElem.attrib["startLatitude"] = "%0.7f" % (row['latitude'],)
-        filesElem.attrib["startLongitude"] = "%0.7f" % (row['longitude'],)
+        filesElem.attrib["lat"] = "%0.7f" % (row['latitude'],)
+        filesElem.attrib["lon"] = "%0.7f" % (row['longitude'],)
         filesElem.attrib["visibility"] = row['visibility']
 
         descriptionElem = etree.SubElement(filesElem, 'description')
