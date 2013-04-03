@@ -61,7 +61,7 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     metadata_file = open("%s/metadata.xml" % (args.output), 'w')
-    metadata_file.write('<gpxFiles version="1.0" generator="OpenStreetMap gpx_dump.py" timestamp="%s">\n' % datetime.datetime.utcnow().replace(microsecond=0).isoformat())
+    metadata_file.write('<gpxFiles version="1.0" generator="OpenStreetMap gpx_dump.py" timestamp="%sZ">\n' % datetime.datetime.utcnow().replace(microsecond=0).isoformat())
 
     if args.host:
         conn = psycopg2.connect(database=args.database, port=args.port, user=args.user, password=args.password, host=args.host)
@@ -97,13 +97,13 @@ if __name__ == '__main__':
                            WHERE inserted=true AND visible=true AND visibility IN ('public', 'trackable', 'identifiable')
                            ORDER BY id""")
     for row in file_cursor:
-        if row[8] == 'private':
+        if row['visibility'] == 'private':
             continue
 
         # Write out the metadata about this GPX file to the metadata list
         filesElem = etree.Element("gpxFile")
         filesElem.attrib["id"] = str(row['id'])
-        filesElem.attrib["timestamp"] = row['timestamp'].isoformat()
+        filesElem.attrib["timestamp"] = row['timestamp'].isoformat() + "Z"
         filesElem.attrib["points"] = str(row['size'])
         filesElem.attrib["lat"] = "%0.7f" % (row['latitude'],)
         filesElem.attrib["lon"] = "%0.7f" % (row['longitude'],)
@@ -133,7 +133,7 @@ if __name__ == '__main__':
         point_cursor.execute("""SELECT latitude,longitude,altitude,trackid,"timestamp"
                                 FROM gps_points
                                 WHERE gpx_id=%s
-                                ORDER BY trackid ASC, "timestamp" ASC""", [row[0]])
+                                ORDER BY trackid ASC, "timestamp" ASC""", [row['id']])
 
         gpxElem = etree.Element("gpx")
         gpxElem.attrib["xmlns"] = "http://www.topografix.com/GPX/1/0"
@@ -162,14 +162,14 @@ if __name__ == '__main__':
 
             if point['timestamp'] and row['visibility'] in ('identifiable', 'trackable'):
                 timeElem = etree.SubElement(ptElem, "time")
-                timeElem.text = point['timestamp'].isoformat()
+                timeElem.text = point['timestamp'].isoformat() + "Z"
 
         point_cursor.close()
 
-        file_path = "%s/%s/%09d" % (args.output, row['visibility'], row[0])
+        file_path = "%s/%s/%09d" % (args.output, row['visibility'], row['id'])
         etree.ElementTree(gpxElem).write(file_path, xml_declaration=True, pretty_print=True, encoding='utf-8')
 
-        filesElem.attrib["filename"] = "%s/%09d" % (row['visibility'], row[0])
+        filesElem.attrib["filename"] = "%s/%09d" % (row['visibility'], row['id'])
         metadata_file.write(etree.tostring(filesElem, pretty_print=True, encoding='utf-8'))
 
         files_so_far += 1
