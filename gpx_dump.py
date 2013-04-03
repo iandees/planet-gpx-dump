@@ -1,4 +1,5 @@
 import psycopg2
+import psycopg2.extras
 from lxml import etree
 import argparse
 import os
