@@ -61,7 +61,7 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     metadata_file = open("%s/metadata.xml" % (args.output), 'w')
-    metadata_file.write('<gpxFiles generator="OpenStreetMap gpx_dump.py" timestamp="%s">\n' % datetime.datetime.utcnow().replace(microsecond=0).isoformat())
+    metadata_file.write('<gpxFiles version="1.0" generator="OpenStreetMap gpx_dump.py" timestamp="%s">\n' % datetime.datetime.utcnow().replace(microsecond=0).isoformat())
 
     if args.host:
         conn = psycopg2.connect(database=args.database, port=args.port, user=args.user, password=args.password, host=args.host)
