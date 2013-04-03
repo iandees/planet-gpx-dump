@@ -13,7 +13,7 @@ MULTI_FACTOR = 10 ** 7
 
 def status_line(text):
     sys.stdout.write(text)
-    sys.stdout.write('\r')
+    sys.stdout.write('\n')
     sys.stdout.flush()
 
 if __name__ == '__main__':
@@ -170,12 +170,13 @@ if __name__ == '__main__':
         file_path = "%s/%s/%07d.gpx" % (args.output, row[8], row[0])
         etree.ElementTree(gpxElem).write(file_path, xml_declaration=True, pretty_print=True, encoding='utf-8')
 
-        filesElem.attrib["filename"] = file_path
+        filesElem.attrib["filename"] = "%s/%07d.gpx" % (row[8], row[0])
         metadata_file.write(etree.tostring(filesElem, pretty_print=True, encoding='utf-8'))
 
         files_so_far += 1
 
-        status_line("Wrote out %7d GPX files." % files_so_far)
+        if (files_so_far % 100 == 0):
+            print "Wrote out %7d GPX files." % files_so_far
 
     print "Wrote out %7d GPX files." % files_so_far
 
