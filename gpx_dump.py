@@ -104,11 +104,13 @@ if __name__ == '__main__':
         filesElem = etree.Element("gpxFile")
         filesElem.attrib["id"] = str(row['id'])
         filesElem.attrib["timestamp"] = row['timestamp'].isoformat()
-        filesElem.attrib["description"] = row['description']
         filesElem.attrib["points"] = str(row['size'])
         filesElem.attrib["startLatitude"] = "%0.7f" % (row['latitude'],)
         filesElem.attrib["startLongitude"] = "%0.7f" % (row['longitude'],)
         filesElem.attrib["visibility"] = row['visibility']
+
+        descriptionElem = etree.SubElement(filesElem, 'description')
+        descriptionElem.text = row['description']
 
         # Only write out user information if it's identifiable or public
         if row['user_id'] and row['visibility'] in ('identifiable', 'public'):
