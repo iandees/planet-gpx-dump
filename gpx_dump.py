@@ -167,18 +167,16 @@ if __name__ == '__main__':
 
         point_cursor.close()
 
-        file_path = "%s/%s/%07d.gpx" % (args.output, row['visibility'], row[0])
+        file_path = "%s/%s/%09d" % (args.output, row['visibility'], row[0])
         etree.ElementTree(gpxElem).write(file_path, xml_declaration=True, pretty_print=True, encoding='utf-8')
 
-        filesElem.attrib["filename"] = "%s/%07d.gpx" % (row['visibility'], row[0])
+        filesElem.attrib["filename"] = "%s/%09d" % (row['visibility'], row[0])
         metadata_file.write(etree.tostring(filesElem, pretty_print=True, encoding='utf-8'))
 
         files_so_far += 1
 
         if (files_so_far % 100 == 0):
-            print "Wrote out %7d GPX files." % files_so_far
-
-    print "Wrote out %7d GPX files." % files_so_far
+            print "Wrote out %9d GPX files." % files_so_far
 
     metadata_file.write('</gpxFiles>\n')
     metadata_file.close()
