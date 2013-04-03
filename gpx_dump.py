@@ -72,8 +72,8 @@ if __name__ == '__main__':
         conn = psycopg2.connect(database=args.database, port=args.port, user=args.user, password=args.password, host=args.host)
     else:
         conn = psycopg2.connect(database=args.database, port=args.port, user=args.user)
-    file_cursor = conn.cursor(name='gpx_files')
-    tags_cursor = conn.cursor()
+    file_cursor = conn.cursor(name='gpx_files', cursor_factory=psycopg2.extras.DictCursor)
+    tags_cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     user_map = dict()
     if args.enable_uid_mapping:
@@ -97,7 +97,7 @@ if __name__ == '__main__':
                 raise
 
     print "Writing traces."
-    file_cursor.execute("""SELECT id,user_id,timestamp,name,description,size,latitude,longitude,visibility
+    file_cursor.execute("""SELECT id,user_id,"timestamp",name,description,size,latitude,longitude,visibility
                            FROM gpx_files
                            WHERE inserted=true AND visible=true AND visibility IN ('public', 'trackable', 'identifiable')
                            ORDER BY id""")
@@ -107,30 +107,30 @@ if __name__ == '__main__':
 
         # Write out the metadata about this GPX file to the metadata list
         filesElem = etree.Element("gpxFile")
-        filesElem.attrib["id"] = str(row[0])
-        filesElem.attrib["timestamp"] = row[2].isoformat()
-        filesElem.attrib["description"] = row[4]
-        filesElem.attrib["points"] = str(row[5])
-        filesElem.attrib["startLatitude"] = "%0.7f" % (row[6],)
-        filesElem.attrib["startLongitude"] = "%0.7f" % (row[7],)
-        filesElem.attrib["visibility"] = row[8]
+        filesElem.attrib["id"] = str(row['id'])
+        filesElem.attrib["timestamp"] = row['timestamp'].isoformat()
+        filesElem.attrib["description"] = row['description']
+        filesElem.attrib["points"] = str(row['size'])
+        filesElem.attrib["startLatitude"] = "%0.7f" % (row['latitude'],)
+        filesElem.attrib["startLongitude"] = "%0.7f" % (row['longitude'],)
+        filesElem.attrib["visibility"] = row['visibility']
 
         # Only write out user information if it's identifiable or public
-        if row[1] and row[8] in ('identifiable', 'public'):
-            filesElem.attrib["uid"] = str(row[1])
+        if row['user_id'] and row['visibility'] in ('identifiable', 'public'):
+            filesElem.attrib["uid"] = str(row['user_id'])
 
-            if row[1] in user_map:
-                filesElem.attrib["user"] = user_map.get(row[1])
+            if row['user_id'] in user_map:
+                filesElem.attrib["user"] = user_map.get(row['user_id'])
 
         if args.enable_tags:
-            tags_cursor.execute("""SELECT tag FROM gpx_file_tags WHERE gpx_id=%s""", [row[0]])
+            tags_cursor.execute("""SELECT tag FROM gpx_file_tags WHERE gpx_id=%s""", [row['id']])
 
             for tag in tags_cursor:
                 tagElem = etree.SubElement(filesElem, "tag")
                 tagElem.text = tag[0]
 
         # Write out GPX file
-        point_cursor = conn.cursor(name='gpx_points')
+        point_cursor = conn.cursor(name='gpx_points', cursor_factory=psycopg2.extras.DictCursor)
         point_cursor.execute("""SELECT latitude,longitude,altitude,trackid,"timestamp"
                                 FROM gps_points
                                 WHERE gpx_id=%s
@@ -143,8 +143,8 @@ if __name__ == '__main__':
 
         trackid = None
         for point in point_cursor:
-            if trackid is None or trackid != point[3]:
-                trackid = point[3]
+            if trackid is None or trackid != point['trackid']:
+                trackid = point['trackid']
                 trkElem = etree.SubElement(gpxElem, "trk")
                 nameElem = etree.SubElement(trkElem, "name")
                 nameElem.text = "Track %s" % (trackid)
@@ -155,22 +155,22 @@ if __name__ == '__main__':
                 segmentElem = etree.SubElement(trkElem, "trkseg")
 
             ptElem = etree.SubElement(segmentElem, "trkpt")
-            ptElem.attrib["lat"] = "%0.7f" % (float(point[0]) / MULTI_FACTOR)
-            ptElem.attrib["lon"] = "%0.7f" % (float(point[1]) / MULTI_FACTOR)
-            if point[2]:
+            ptElem.attrib["lat"] = "%0.7f" % (float(point['latitude']) / MULTI_FACTOR)
+            ptElem.attrib["lon"] = "%0.7f" % (float(point['longitude']) / MULTI_FACTOR)
+            if point['altitude']:
                 eleElem = etree.SubElement(ptElem, "ele")
-                eleElem.text = "%0.2f" % point[2]
+                eleElem.text = "%0.2f" % point['altitude']
 
-            if point[4] and row[8] in ('identifiable', 'trackable'):
+            if point['timestamp'] and row['visibility'] in ('identifiable', 'trackable'):
                 timeElem = etree.SubElement(ptElem, "time")
-                timeElem.text = point[4].isoformat()
+                timeElem.text = point['timestamp'].isoformat()
 
         point_cursor.close()
 
-        file_path = "%s/%s/%07d.gpx" % (args.output, row[8], row[0])
+        file_path = "%s/%s/%07d.gpx" % (args.output, row['visibility'], row[0])
         etree.ElementTree(gpxElem).write(file_path, xml_declaration=True, pretty_print=True, encoding='utf-8')
 
-        filesElem.attrib["filename"] = "%s/%07d.gpx" % (row[8], row[0])
+        filesElem.attrib["filename"] = "%s/%07d.gpx" % (row['visibility'], row[0])
         metadata_file.write(etree.tostring(filesElem, pretty_print=True, encoding='utf-8'))
 
         files_so_far += 1
