@@ -120,10 +120,12 @@ if __name__ == '__main__':
                 filesElem.attrib["user"] = user_map.get(row['user_id'])
 
         if args.enable_tags:
+            tagsElem = etree.SubElement(filesElem, "tags")
+
             tags_cursor.execute("""SELECT tag FROM gpx_file_tags WHERE gpx_id=%s""", [row['id']])
 
             for tag in tags_cursor:
-                tagElem = etree.SubElement(filesElem, "tag")
+                tagElem = etree.SubElement(tagsElem, "tag")
                 tagElem.text = tag[0]
 
         # Write out GPX file
