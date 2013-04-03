@@ -11,11 +11,6 @@ import datetime
 MULTI_FACTOR = 10 ** 7
 
 
-def status_line(text):
-    sys.stdout.write(text)
-    sys.stdout.write('\n')
-    sys.stdout.flush()
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Dumps GPX files from the OSM railsport database schema.")
 
