@@ -271,13 +271,15 @@ INSERT INTO users (id, display_name) VALUES
 (100, 'abcdefg'),
 (200, 'hijklmn'),
 (300, 'opqrstu'),
-(400, 'vwxyz');
+(400, 'vwxyz'),
+(500, 'überman');
 
 INSERT INTO gpx_files (id,user_id,visible,name,size,latitude,longitude,"timestamp",description,inserted,visibility) VALUES
 (10,100,true,'trace a',1500,45.0,-90.0,'2013-01-01T22:00:00Z','trace a desc',true,'public'),
 (11,100,true,'trace b',1500,45.1,-90.1,'2013-01-02T23:30:00Z','trace b desc',true,'identifiable'),
 (12,100,true,'trace c',1500,45.1,-90.1,'2013-01-02T21:30:00Z','trace c desc',true,'trackable'),
-(13,100,true,'trace d',1500,45.1,-90.1,'2013-01-02T20:30:00Z','trace d desc',true,'private')
+(13,100,true,'trace d',1500,45.1,-90.1,'2013-01-02T20:30:00Z','trace d desc',true,'private'),
+(14,500,true,'trace å∫ç∂éƒ©ü!',1500,45.1,-90.1,'2013-01-02T20:30:00Z','trace å∫ç∂éƒ©ü!<>/',true,'trackable')
 ;
 
 INSERT INTO gps_points (gpx_id,trackid,"timestamp",tile,latitude,longitude,altitude) VALUES
@@ -285,7 +287,28 @@ INSERT INTO gps_points (gpx_id,trackid,"timestamp",tile,latitude,longitude,altit
 (10,1,'2013-01-01T22:00:01Z',0,452234567,-912234567,45.6),
 (10,2,'2013-01-01T22:00:00Z',0,461234567,-901234567,46.2),
 (10,2,'2013-01-01T22:00:01Z',0,462234567,-902234567,46.5);
+INSERT INTO gps_points (gpx_id,trackid,"timestamp",tile,latitude,longitude,altitude) VALUES
+(11,1,'2013-01-01T22:00:00Z',0,451234567,-911234567,45.2),
+(11,1,'2013-01-01T22:00:01Z',0,452234567,-912234567,45.6),
+(11,2,'2013-01-01T22:00:00Z',0,461234567,-901234567,46.2),
+(11,2,'2013-01-01T22:00:01Z',0,462234567,-902234567,46.5);
+INSERT INTO gps_points (gpx_id,trackid,"timestamp",tile,latitude,longitude,altitude) VALUES
+(12,1,'2013-01-01T22:00:00Z',0,451234567,-911234567,45.2),
+(12,1,'2013-01-01T22:00:01Z',0,452234567,-912234567,45.6),
+(12,2,'2013-01-01T22:00:00Z',0,461234567,-901234567,46.2),
+(12,2,'2013-01-01T22:00:01Z',0,462234567,-902234567,46.5);
+INSERT INTO gps_points (gpx_id,trackid,"timestamp",tile,latitude,longitude,altitude) VALUES
+(13,1,'2013-01-01T22:00:00Z',0,451234567,-911234567,45.2),
+(13,1,'2013-01-01T22:00:01Z',0,452234567,-912234567,45.6),
+(13,2,'2013-01-01T22:00:00Z',0,461234567,-901234567,46.2),
+(13,2,'2013-01-01T22:00:01Z',0,462234567,-902234567,46.5);
+INSERT INTO gps_points (gpx_id,trackid,"timestamp",tile,latitude,longitude,altitude) VALUES
+(14,1,'2013-01-01T22:00:00Z',0,451234567,-911234567,45.2),
+(14,1,'2013-01-01T22:00:01Z',0,452234567,-912234567,45.6),
+(14,2,'2013-01-01T22:00:00Z',0,461234567,-901234567,46.2),
+(14,2,'2013-01-01T22:00:01Z',0,462234567,-902234567,46.5);
 
 INSERT INTO gpx_file_tags (gpx_id,tag) VALUES
 (10,'tag a'),
-(11,'tag b');
+(11,'tag b'),
+(14,'tag ü');
