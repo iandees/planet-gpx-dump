@@ -1,5 +1,6 @@
 import psycopg2
 import psycopg2.extras
+import psycopg2.extensions
 from lxml import etree
 import argparse
 import os
@@ -11,6 +12,9 @@ import datetime
 # shifted by seven places.
 MULTI_FACTOR = 10 ** 7
 
+# Default to unicode everything out of the database
+psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
+psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Dumps GPX files from the OSM railsport database schema.")
@@ -62,12 +66,16 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     metadata_file = open("%s/metadata.xml" % (args.output), 'w')
+    metadata_file.write('<?xml version="1.0" encoding="UTF-8" ?>\n');
     metadata_file.write('<gpxFiles version="1.0" generator="OpenStreetMap gpx_dump.py" timestamp="%sZ">\n' % datetime.datetime.utcnow().replace(microsecond=0).isoformat())
 
     if args.host:
         conn = psycopg2.connect(database=args.database, port=args.port, user=args.user, password=args.password, host=args.host)
     else:
         conn = psycopg2.connect(database=args.database, port=args.port, user=args.user)
+
+    conn.set_client_encoding('UTF8')
+
     file_cursor = conn.cursor(name='gpx_files', cursor_factory=psycopg2.extras.DictCursor)
     tags_cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
