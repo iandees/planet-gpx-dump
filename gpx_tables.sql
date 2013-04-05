@@ -14,10 +14,23 @@ SET default_tablespace = '';
 
 SET default_with_oids = false;
 
-CREATE TYPE gpx_visibility_enum AS ENUM ('private', 'public', 'trackable', 'identifiable');
+CREATE TYPE user_status_enum AS ENUM (
+    'pending',
+    'active',
+    'confirmed',
+    'suspended',
+    'deleted'
+);
+CREATE TYPE gpx_visibility_enum AS ENUM (
+    'private',
+    'public',
+    'trackable',
+    'identifiable'
+);
 CREATE TABLE users (
     id bigint NOT NULL,
-    display_name character varying(255) NOT NULL
+    display_name character varying(255) DEFAULT ''::character varying NOT NULL,
+    status user_status_enum DEFAULT 'pending'::user_status_enum NOT NULL
 );
 ALTER TABLE public.users OWNER TO openstreetmap;
 ALTER TABLE ONLY users 
@@ -267,18 +280,18 @@ GRANT ALL ON SEQUENCE gpx_files_id_seq TO openstreetmap;
 
 --- Insert some test data.
 
-INSERT INTO users (id, display_name) VALUES
-(100, 'abcdefg'),
-(200, 'hijklmn'),
-(300, 'opqrstu'),
-(400, 'vwxyz'),
-(500, 'überman');
+INSERT INTO users (id, display_name, status) VALUES
+(100, 'abcdefg', 'pending'),
+(200, 'hijklmn', 'active'),
+(300, 'opqrstu', 'confirmed'),
+(400, 'vwxyz22', 'deleted'),
+(500, 'überman', 'active');
 
 INSERT INTO gpx_files (id,user_id,visible,name,size,latitude,longitude,"timestamp",description,inserted,visibility) VALUES
 (10,100,true,'trace a',1500,45.0,-90.0,'2013-01-01T22:00:00Z','trace a desc',true,'public'),
-(11,100,true,'trace b',1500,45.1,-90.1,'2013-01-02T23:30:00Z','trace b desc',true,'identifiable'),
-(12,100,true,'trace c',1500,45.1,-90.1,'2013-01-02T21:30:00Z','trace c desc',true,'trackable'),
-(13,100,true,'trace d',1500,45.1,-90.1,'2013-01-02T20:30:00Z','trace d desc',true,'private'),
+(11,200,true,'trace b',1500,45.1,-90.1,'2013-01-02T23:30:00Z','trace b desc',true,'identifiable'),
+(12,300,true,'trace c',1500,45.1,-90.1,'2013-01-02T21:30:00Z','trace c desc',true,'trackable'),
+(13,400,true,'trace d',1500,45.1,-90.1,'2013-01-02T20:30:00Z','trace d desc',true,'private'),
 (14,500,true,'trace å∫ç∂éƒ©ü!',1500,45.1,-90.1,'2013-01-02T20:30:00Z','trace å∫ç∂éƒ©ü!<>/',true,'trackable')
 ;
 

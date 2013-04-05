@@ -104,9 +104,21 @@ if __name__ == '__main__':
                 raise
 
     print "Writing traces."
-    file_cursor.execute("""SELECT id,user_id,"timestamp",name,description,size,latitude,longitude,visibility
+    file_cursor.execute("""SELECT gpx_files.id,
+                                  gpx_files.user_id,
+                                  gpx_files.timestamp,
+                                  gpx_files.name,
+                                  gpx_files.description,
+                                  gpx_files.size,
+                                  gpx_files.latitude,
+                                  gpx_files.longitude,
+                                  gpx_files.visibility
                            FROM gpx_files
-                           WHERE inserted=true AND visible=true AND visibility IN ('public', 'trackable', 'identifiable')
+                           INNER JOIN users ON users.id = gpx_files.user_id
+                           WHERE users.status='active'
+                             AND gpx_files.inserted=true
+                             AND gpx_files.visible=true
+                             AND gpx_files.visibility IN ('public', 'trackable', 'identifiable')
                            ORDER BY id""")
     for row in file_cursor:
         if row['visibility'] == 'private':
