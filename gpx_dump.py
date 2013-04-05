@@ -16,6 +16,9 @@ MULTI_FACTOR = 10 ** 7
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
 
+# See http://stackoverflow.com/questions/4324790/removing-control-characters-from-a-string-in-python
+removes_control_chars = dict.fromkeys(range(32))
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Dumps GPX files from the OSM railsport database schema.")
 
@@ -66,7 +69,7 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     metadata_file = open("%s/metadata.xml" % (args.output), 'w')
-    metadata_file.write('<?xml version="1.0" encoding="UTF-8" ?>\n');
+    metadata_file.write('<?xml version="1.0" encoding="UTF-8" ?>\n')
     metadata_file.write('<gpxFiles version="1.0" generator="OpenStreetMap gpx_dump.py" timestamp="%sZ">\n' % datetime.datetime.utcnow().replace(microsecond=0).isoformat())
 
     if args.host:
@@ -135,7 +138,7 @@ if __name__ == '__main__':
 
             for tag in tags_cursor:
                 tagElem = etree.SubElement(tagsElem, "tag")
-                tagElem.text = tag[0]
+                tagElem.text = tag[0].translate(removes_control_chars)
 
         # Write out GPX file
         point_cursor = conn.cursor(name='gpx_points', cursor_factory=psycopg2.extras.DictCursor)

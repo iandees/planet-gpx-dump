@@ -311,4 +311,4 @@ INSERT INTO gps_points (gpx_id,trackid,"timestamp",tile,latitude,longitude,altit
 INSERT INTO gpx_file_tags (gpx_id,tag) VALUES
 (10,'tag a'),
 (11,'tag b'),
-(14,'tag ü');
+(14,'tag ü'||chr(19)||chr(19));
