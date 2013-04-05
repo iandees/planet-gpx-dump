@@ -61,6 +61,6 @@ filename   | The file name of the GPX trace (relative to the metadata.xml file).
 
 Within each `<gpxFile>` element can exist:
 - at most one `<description>` tag containing the description of the GPX trace as specified by the user.
-- one `<tags>` element containing zero or more `<tag>` elements containing the tags for the GPX trace as specified by the user.
+- at most one `<tags>` element containing zero or more `<tag>` elements containing the tags for the GPX trace as specified by the user.
 
 All times (in the GPX and metadata.xml files) are in UTC.

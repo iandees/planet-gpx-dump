@@ -145,13 +145,14 @@ if __name__ == '__main__':
                 filesElem.attrib["user"] = user_map.get(row['user_id'])
 
         if args.enable_tags:
-            tagsElem = etree.SubElement(filesElem, "tags")
-
             tags_cursor.execute("""SELECT tag FROM gpx_file_tags WHERE gpx_id=%s""", [row['id']])
 
-            for tag in tags_cursor:
-                tagElem = etree.SubElement(tagsElem, "tag")
-                tagElem.text = tag[0].translate(removes_control_chars)
+            if tags_cursor.rowcount > 0:
+                tagsElem = etree.SubElement(filesElem, "tags")
+
+                for tag in tags_cursor:
+                    tagElem = etree.SubElement(tagsElem, "tag")
+                    tagElem.text = tag[0].translate(removes_control_chars)
 
         # Write out GPX file
         point_cursor = conn.cursor(name='gpx_points', cursor_factory=psycopg2.extras.DictCursor)
