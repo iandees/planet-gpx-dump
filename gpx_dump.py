@@ -133,8 +133,9 @@ if __name__ == '__main__':
         filesElem.attrib["lon"] = "%0.7f" % (row['longitude'],)
         filesElem.attrib["visibility"] = row['visibility']
 
-        descriptionElem = etree.SubElement(filesElem, 'description')
-        descriptionElem.text = row['description']
+        if row['description']:
+            descriptionElem = etree.SubElement(filesElem, 'description')
+            descriptionElem.text = row['description']
 
         # Only write out user information if it's identifiable or public
         if row['user_id'] and row['visibility'] in ('identifiable', 'public'):
