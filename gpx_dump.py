@@ -19,6 +19,15 @@ psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
 # See http://stackoverflow.com/questions/4324790/removing-control-characters-from-a-string-in-python
 removes_control_chars = dict.fromkeys(range(32))
 
+def mkdirs(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Dumps GPX files from the OSM railsport database schema.")
 
@@ -92,16 +101,6 @@ if __name__ == '__main__':
         print "Mapped %s user ids." % (len(user_map))
 
     files_so_far = 0
-
-    for d in args.privacy:
-        path = '%s/%s' % (args.output, d)
-        try:
-            os.makedirs(path)
-        except OSError as exc:
-            if exc.errno == errno.EEXIST and os.path.isdir(path):
-                pass
-            else:
-                raise
 
     print "Writing traces."
     file_cursor.execute("""SELECT gpx_files.id,
@@ -192,10 +191,16 @@ if __name__ == '__main__':
 
         point_cursor.close()
 
-        file_path = "%s/%s/%09d.gpx" % (args.output, row['visibility'], row['id'])
-        etree.ElementTree(gpxElem).write(file_path, xml_declaration=True, pretty_print=True, encoding='utf-8')
+        id_padded = str(row['id']).zfill(9)
+        # We store the path relative to the metadata for output to metadata.xml
+        dir_rel_to_metadata = "%s/%s/%s" % (row['visibility'], id_padded[0:3], id_padded[3:6])
+        path_rel_to_metadata = "%s/%s.gpx" % (dir_rel_to_metadata, id_padded)
+        complete_dir = "%s/%s" % (args.output, dir_rel_to_metadata)
+        complete_file_path = "%s/%s" % (args.output, path_rel_to_metadata)
+        mkdirs(complete_dir)
+        etree.ElementTree(gpxElem).write(complete_file_path, xml_declaration=True, pretty_print=True, encoding='utf-8')
 
-        filesElem.attrib["filename"] = "%s/%09d.gpx" % (row['visibility'], row['id'])
+        filesElem.attrib["filename"] = path_rel_to_metadata
         metadata_file.write(etree.tostring(filesElem, pretty_print=True, encoding='utf-8'))
 
         files_so_far += 1
