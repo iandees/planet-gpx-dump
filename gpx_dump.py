@@ -134,7 +134,7 @@ if __name__ == '__main__':
 
         if row['description']:
             descriptionElem = etree.SubElement(filesElem, 'description')
-            descriptionElem.text = row['description']
+            descriptionElem.text = row['description'].translate(removes_control_chars)
 
         # Only write out user information if it's identifiable or public
         if row['user_id'] and row['visibility'] in ('identifiable', 'public'):
