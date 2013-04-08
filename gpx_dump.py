@@ -7,6 +7,7 @@ import os
 import errno
 import sys
 import datetime
+import time
 
 # Lat/lon in the gps_points schema is stored as an int with the decimal
 # shifted by seven places.
@@ -202,6 +203,7 @@ if __name__ == '__main__':
 
         filesElem.attrib["filename"] = path_rel_to_metadata
         metadata_file.write(etree.tostring(filesElem, pretty_print=True, encoding='utf-8'))
+        os.utime(complete_file_path, (time.mktime(row['timestamp'].timetuple()), time.mktime(row['timestamp'].timetuple())))
 
         files_so_far += 1
 
