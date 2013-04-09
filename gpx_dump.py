@@ -8,6 +8,7 @@ import errno
 import sys
 import datetime
 import time
+import atexit
 
 # Lat/lon in the gps_points schema is stored as an int with the decimal
 # shifted by seven places.
@@ -19,6 +20,14 @@ psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
 
 # See http://stackoverflow.com/questions/4324790/removing-control-characters-from-a-string-in-python
 removes_control_chars = dict.fromkeys(range(32))
+
+# Save the last-written GPX ID so a user can continue
+last_written_gpx = 0
+
+
+def exit_write():
+    print "Last written GPX id was: %9d" % last_written_gpx
+atexit.register(exit_write)
 
 
 def mkdirs(path):
@@ -56,6 +65,11 @@ if __name__ == '__main__':
     parser.add_argument("--output",
         help="output directory to fill with resulting GPX files",
         default=".")
+    parser.add_argument("--continue",
+        help="continue from this gpx file id",
+        type=int,
+        dest="continue_from",
+        required=False)
 
     # Extraneous options
     parser.add_argument("--disable-tags",
@@ -70,13 +84,16 @@ if __name__ == '__main__':
         sys.stderr.write("Output directory doesn't exist.\n")
         sys.exit(-1)
 
-    if os.path.exists("%s/metadata.xml" % (args.output)):
-        sys.stderr.write("Metadata file already exists.\n")
+    if os.path.exists("%s/metadata.xml" % (args.output)) and not args.continue_from:
+        sys.stderr.write("Metadata file already exists. Did you mean to use --continue_from?\n")
         sys.exit(-1)
 
-    metadata_file = open("%s/metadata.xml" % (args.output), 'w')
-    metadata_file.write('<?xml version="1.0" encoding="UTF-8" ?>\n')
-    metadata_file.write('<gpxFiles version="1.0" generator="OpenStreetMap gpx_dump.py" timestamp="%sZ">\n' % datetime.datetime.utcnow().replace(microsecond=0).isoformat())
+    if args.continue_from:
+        metadata_file = open("%s/metadata.xml" % (args.output), 'a')
+    else:
+        metadata_file = open("%s/metadata.xml" % (args.output), 'w')
+        metadata_file.write('<?xml version="1.0" encoding="UTF-8" ?>\n')
+        metadata_file.write('<gpxFiles version="1.0" generator="OpenStreetMap gpx_dump.py" timestamp="%sZ">\n' % datetime.datetime.utcnow().replace(microsecond=0).isoformat())
 
     if args.host:
         conn = psycopg2.connect(database=args.database, port=args.port, user=args.user, password=args.password, host=args.host)
@@ -89,6 +106,11 @@ if __name__ == '__main__':
     tags_cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     files_so_far = 0
+
+    if args.continue_from:
+        continue_sql = "AND gpx_files.id >= %s" % args.continue_from
+    else:
+        continue_sql = ""
 
     print "Writing traces."
     file_cursor.execute("""SELECT gpx_files.id,
@@ -107,7 +129,8 @@ if __name__ == '__main__':
                              AND gpx_files.inserted=true
                              AND gpx_files.visible=true
                              AND gpx_files.visibility IN ('public', 'trackable', 'identifiable')
-                           ORDER BY id""")
+                             {}
+                           ORDER BY id""".format(continue_sql))
     for row in file_cursor:
         if row['visibility'] == 'private':
             continue
@@ -189,6 +212,7 @@ if __name__ == '__main__':
         complete_file_path = "%s/%s" % (args.output, path_rel_to_metadata)
         mkdirs(complete_dir)
         etree.ElementTree(gpxElem).write(complete_file_path, xml_declaration=True, pretty_print=True, encoding='utf-8')
+        last_written_gpx = row['id']
 
         filesElem.attrib["filename"] = path_rel_to_metadata
         metadata_file.write(etree.tostring(filesElem, pretty_print=True, encoding='utf-8'))
@@ -198,6 +222,8 @@ if __name__ == '__main__':
 
         if (files_so_far % 100 == 0):
             print "Wrote out %9d GPX files." % files_so_far
+
+    print "Wrote out %9d GPX files." % files_so_far
 
     metadata_file.write('</gpxFiles>\n')
     metadata_file.close()
