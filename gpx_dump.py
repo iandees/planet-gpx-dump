@@ -126,6 +126,7 @@ if __name__ == '__main__':
                            FROM gpx_files
                            INNER JOIN users ON users.id = gpx_files.user_id
                            WHERE users.status IN ('active', 'confirmed')
+                             AND users.data_public=true
                              AND gpx_files.inserted=true
                              AND gpx_files.visible=true
                              AND gpx_files.visibility IN ('public', 'trackable', 'identifiable')
