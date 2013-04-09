@@ -156,7 +156,10 @@ if __name__ == '__main__':
 
         # Write out GPX file
         point_cursor = conn.cursor(name='gpx_points', cursor_factory=psycopg2.extras.DictCursor)
-        point_cursor.execute("""SELECT latitude,longitude,altitude,trackid,"timestamp"
+        point_cursor.execute("""SELECT latitude,longitude,altitude,trackid,
+                                     (CASE WHEN extract(YEAR FROM "timestamp") < 1 THEN NULL
+                                           WHEN extract(YEAR FROM "timestamp") > 9999 THEN NULL
+                                           ELSE "timestamp" END) as "timestamp"
                                 FROM gps_points
                                 WHERE gpx_id=%s
                                 ORDER BY trackid ASC, "timestamp" ASC""", [row['id']])
