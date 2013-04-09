@@ -20,6 +20,7 @@ psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
 # See http://stackoverflow.com/questions/4324790/removing-control-characters-from-a-string-in-python
 removes_control_chars = dict.fromkeys(range(32))
 
+
 def mkdirs(path):
     try:
         os.makedirs(path)
@@ -62,11 +63,6 @@ if __name__ == '__main__':
         dest="enable_tags",
         default=True,
         action="store_false")
-    parser.add_argument("--disable-uid-mapping",
-        help="disable userid to username mapping",
-        dest="enable_uid_mapping",
-        default=True,
-        action="store_false")
 
     args = parser.parse_args()
 
@@ -92,20 +88,12 @@ if __name__ == '__main__':
     file_cursor = conn.cursor(name='gpx_files', cursor_factory=psycopg2.extras.DictCursor)
     tags_cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    user_map = dict()
-    if args.enable_uid_mapping:
-        print "Mapping user IDs."
-        user_cursor = conn.cursor(name='users')
-        user_cursor.execute("""SELECT id,display_name FROM users""")
-        for user in user_cursor:
-            user_map[user[0]] = user[1]
-        print "Mapped %s user ids." % (len(user_map))
-
     files_so_far = 0
 
     print "Writing traces."
     file_cursor.execute("""SELECT gpx_files.id,
                                   gpx_files.user_id,
+                                  users.display_name,
                                   gpx_files.timestamp,
                                   gpx_files.name,
                                   gpx_files.description,
@@ -140,9 +128,7 @@ if __name__ == '__main__':
         # Only write out user information if it's identifiable or public
         if row['user_id'] and row['visibility'] in ('identifiable', 'public'):
             filesElem.attrib["uid"] = str(row['user_id'])
-
-            if row['user_id'] in user_map:
-                filesElem.attrib["user"] = user_map.get(row['user_id'])
+            filesElem.attrib["user"] = row['display_name']
 
         if args.enable_tags:
             tags_cursor.execute("""SELECT tag FROM gpx_file_tags WHERE gpx_id=%s""", [row['id']])

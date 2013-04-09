@@ -34,11 +34,9 @@ optional arguments:
                         select which privacy levels to write out
   --output OUTPUT       output directory to fill with resulting GPX files
   --disable-tags        disable dumping tags to the metadata for each gpx file
-  --disable-uid-mapping
-                        disable userid to username mapping
 ```
 
-There are database connection options and output options. Use `--host`, `--port`, `--user`, `--password`, and `--database` to specify how to connect to the PostgreSQL database. The output options specify which privacy levels to output and whether or not to disable tags and username mapping.
+There are database connection options and output options. Use `--host`, `--port`, `--user`, `--password`, and `--database` to specify how to connect to the PostgreSQL database. The output options specify which privacy levels to output and whether or not to disable tags.
 
 Output Format
 -------------
