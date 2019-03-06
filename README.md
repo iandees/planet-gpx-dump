@@ -51,7 +51,7 @@ id         | The database ID for the gpx file.
 timestamp  | The timestamp for when the trace was created in the database.
 points     | The number of points in the GPX file.
 lat        | The latitude for the GPX file. By default, this is the latitude for the first point in the file but can be changed by the user.
-lon        | The longitude for the GPX file. By default, this is the longtiude for the first point in the file but can be changed by the user.
+lon        | The longitude for the GPX file. By default, this is the longitude for the first point in the file but can be changed by the user.
 visibility | The visibility of the GPX file as specified by the user. One of `private`, `identifiable`, `public`, `trackable`.
 uid        | The OSM user ID for the user that uploaded the trace. Note that this will only appear for `identifiable` and `public` traces.
 user       | The OSM display name for the user that uploaded the trace. Note that this will only appear for `identifiable` and `public` traces and if "user id mapping" was enabled at run time.
